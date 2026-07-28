@@ -112,7 +112,7 @@ function distanceKm(a, b) {
 }
 
 function searchCacheKey(center) {
-  return `db-spots:${center.lat.toFixed(2)}:${center.lng.toFixed(2)}:${searchRadius}`;
+  return `db-spots:v2:${center.lat.toFixed(2)}:${center.lng.toFixed(2)}:${searchRadius}`;
 }
 
 async function loadNearbySpots(center) {

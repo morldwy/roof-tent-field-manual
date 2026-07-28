@@ -127,6 +127,8 @@ def grid():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch", type=int, default=4)
+    parser.add_argument("--lat", type=float)
+    parser.add_argument("--lng", type=float)
     args = parser.parse_args()
     state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {"next": 0, "imported": 0}
     points = grid()
@@ -135,8 +137,9 @@ def main():
     import_key = IMPORT_KEY_FILE.read_text().strip()
     completed = 0
 
-    while completed < args.batch and state["next"] < len(points):
-        lat, lng = points[state["next"]]
+    requested_center = (args.lat, args.lng) if args.lat is not None and args.lng is not None else None
+    while completed < args.batch and (requested_center or state["next"] < len(points)):
+        lat, lng = requested_center or points[state["next"]]
         candidates = research(lat, lng)
         for start in range(0, len(candidates), 500):
             result = request_json(
@@ -150,6 +153,9 @@ def main():
                 timeout=45,
             )
             state["imported"] += result.get("imported", 0)
+        if requested_center:
+            completed += 1
+            break
         state["next"] += 1
         completed += 1
         STATE_FILE.write_text(json.dumps(state))
