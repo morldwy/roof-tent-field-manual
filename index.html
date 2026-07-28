@@ -9,7 +9,7 @@
   <title>Wild Spots · Roof Tent Manual</title>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=20260729-3">
+  <link rel="stylesheet" href="styles.css?v=20260729-4">
 </head>
 <body>
   <nav class="topnav" aria-label="Hauptnavigation">
@@ -21,7 +21,11 @@
   </nav>
 
   <header class="hero photo-hero">
-    <img class="hero-media" src="assets/hero-w211-columbus.jpg" width="768" height="1024" fetchpriority="high" decoding="async" alt="Mercedes W211 mit geschlossenem Autohome Columbus Variant an einer felsigen Küste bei Sonnenuntergang">
+    <picture>
+      <source media="(min-width: 761px)" srcset="assets/hero-w211-columbus-wide-v2.webp" type="image/webp">
+      <source srcset="assets/hero-w211-columbus-mobile-v2.webp" type="image/webp">
+      <img class="hero-media" src="assets/hero-w211-columbus.jpg" width="768" height="1024" fetchpriority="high" decoding="async" alt="Silberner Mercedes W211 mit geschlossenem Autohome Columbus an der Küste bei Sonnenuntergang">
+    </picture>
     <div>
       <p class="eyebrow">Roof Tent Manual</p>
       <h1>Wild Spots</h1>
@@ -115,6 +119,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="backend.js?v=20260728-1"></script>
-  <script src="app.js?v=20260729-2"></script>
+  <script src="app.js?v=20260729-3"></script>
 </body>
 </html>

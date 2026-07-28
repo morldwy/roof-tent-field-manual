@@ -10,6 +10,8 @@ Alle wichtigen Änderungen dieses Projekts werden hier dokumentiert.
   Küstenlinie als Meer eingeordnet; Binnenstrände erscheinen als See.
 - Hero-Subline nennt das Übernachten im Dachzelt ausdrücklich.
 - Hero-Foto erscheint heller, kontrastreicher und farblich brillanter.
+- Eigenständige, optimierte Hero-Fassungen für breiten Desktop und mobiles
+  Hochformat verbessern Motivwirkung und Ladezeit.
 - Überschriften verwenden die frei lizenzierte, selbst gehostete Source Serif 4
   Display als rechtssichere Annäherung an Corporate A.
 

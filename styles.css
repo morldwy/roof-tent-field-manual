@@ -84,7 +84,7 @@ button, a { font: inherit; }
   height: 100%;
   object-fit: cover;
   object-position: center 65%;
-  filter: brightness(1.1) contrast(1.05) saturate(1.12);
+  filter: brightness(1.03) contrast(1.02) saturate(1.04);
 }
 
 .eyebrow {

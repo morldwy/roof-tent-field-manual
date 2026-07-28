@@ -77,12 +77,22 @@ test("OSM beaches distinguish coast from inland water", async () => {
 });
 
 test("the supplied hero image exists and has no embedded EXIF marker", async () => {
-  const imageUrl = new URL("../assets/hero-w211-columbus.jpg", import.meta.url);
-  const image = await readFile(imageUrl);
-  const info = await stat(imageUrl);
-  assert.ok(info.size > 50_000);
-  assert.equal(image.includes(Buffer.from("Exif")), false);
-  assert.equal(image.includes(Buffer.from("GPS")), false);
+  const heroFiles = [
+    "../assets/hero-w211-columbus.jpg",
+    "../assets/hero-w211-columbus-wide-v2.webp",
+    "../assets/hero-w211-columbus-mobile-v2.webp"
+  ];
+  for (const relativePath of heroFiles) {
+    const imageUrl = new URL(relativePath, import.meta.url);
+    const image = await readFile(imageUrl);
+    const info = await stat(imageUrl);
+    assert.ok(info.size > 50_000);
+    assert.equal(image.includes(Buffer.from("Exif")), false);
+    assert.equal(image.includes(Buffer.from("GPS")), false);
+  }
+  const index = await read("index.html");
+  assert.match(index, /hero-w211-columbus-wide-v2\.webp/);
+  assert.match(index, /hero-w211-columbus-mobile-v2\.webp/);
 });
 
 test("the self-hosted serif includes its open font license", async () => {
