@@ -9,6 +9,7 @@ Alle wichtigen Änderungen dieses Projekts werden hier dokumentiert.
 - OpenStreetMap-Strände werden nur noch bei Nähe zu einer tatsächlichen
   Küstenlinie als Meer eingeordnet; Binnenstrände erscheinen als See.
 - Hero-Subline nennt das Übernachten im Dachzelt ausdrücklich.
+- Hero-Foto erscheint heller, kontrastreicher und farblich brillanter.
 
 ## [0.1.0] - 2026-07-28
 

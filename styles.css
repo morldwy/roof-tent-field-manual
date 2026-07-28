@@ -64,8 +64,8 @@ button, a { font: inherit; }
   inset: 0;
   content: "";
   background:
-    linear-gradient(90deg, rgba(9, 35, 29, .9) 0%, rgba(12, 42, 34, .58) 45%, rgba(12, 36, 31, .12) 72%),
-    linear-gradient(0deg, rgba(8, 27, 22, .72), transparent 60%);
+    linear-gradient(90deg, rgba(9, 35, 29, .78) 0%, rgba(12, 42, 34, .42) 45%, rgba(12, 36, 31, .06) 72%),
+    linear-gradient(0deg, rgba(8, 27, 22, .58), transparent 58%);
 }
 .hero-media {
   position: absolute;
@@ -75,6 +75,7 @@ button, a { font: inherit; }
   height: 100%;
   object-fit: cover;
   object-position: center 65%;
+  filter: brightness(1.1) contrast(1.05) saturate(1.12);
 }
 
 .eyebrow {
@@ -380,8 +381,8 @@ footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align:
   .photo-hero { min-height: min(620px, calc(100svh - 7rem)); justify-content: flex-end; }
   .photo-hero::before {
     background:
-      linear-gradient(0deg, rgba(8, 29, 23, .94) 0%, rgba(10, 37, 30, .48) 58%, rgba(9, 31, 26, .08) 82%),
-      linear-gradient(90deg, rgba(9, 35, 29, .22), transparent);
+      linear-gradient(0deg, rgba(8, 29, 23, .86) 0%, rgba(10, 37, 30, .34) 58%, rgba(9, 31, 26, .04) 82%),
+      linear-gradient(90deg, rgba(9, 35, 29, .14), transparent);
   }
   .hero-media { object-position: center 58%; }
   .guide-hero { min-height: 360px; justify-content: flex-end; }
