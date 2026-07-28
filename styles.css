@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Source Serif 4 Display";
+  src: url("assets/fonts/source-serif-4-display-regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   --ink: #17372f;
   --forest: #1f5547;
@@ -9,6 +17,7 @@
   --green: #2e7d55;
   --amber: #d58a21;
   --red: #b64b3b;
+  --serif: "Source Serif 4 Display", Georgia, serif;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
   background: var(--paper);
@@ -34,7 +43,7 @@ button, a { font: inherit; }
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
-.brand { display: flex; align-items: center; gap: .55rem; color: white; font-family: Georgia, serif; font-size: 1.05rem; text-decoration: none; }
+.brand { display: flex; align-items: center; gap: .55rem; color: white; font-family: var(--serif); font-size: 1.05rem; text-decoration: none; }
 .brand span { color: #b9ca9c; font-size: .85rem; }
 .topnav-links { display: flex; gap: .35rem; }
 .topnav-links a { padding: .6rem .85rem; border-radius: 999px; color: #d6e4dc; font-size: .86rem; font-weight: 750; text-decoration: none; white-space: nowrap; }
@@ -86,7 +95,7 @@ button, a { font: inherit; }
   text-transform: uppercase;
 }
 
-h1, h2 { margin: 0; font-family: Georgia, serif; font-weight: 500; }
+h1, h2 { margin: 0; font-family: var(--serif); font-weight: 400; }
 h1 { font-size: clamp(2.5rem, 8vw, 5.5rem); line-height: .95; }
 h2 { font-size: clamp(1.7rem, 4vw, 2.5rem); }
 .intro { max-width: 43rem; margin: 1rem 0 0; color: #dce8df; line-height: 1.55; }
@@ -171,7 +180,7 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
   background: var(--card);
 }
 .spot-top { display: flex; justify-content: space-between; gap: .75rem; }
-.spot h3 { margin: 0; font-family: Georgia, serif; font-size: 1.25rem; }
+.spot h3 { margin: 0; font-family: var(--serif); font-size: 1.25rem; }
 .status-dot {
   flex: 0 0 auto;
   display: inline-block;
@@ -259,7 +268,7 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
 }
 .comments-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
 .comments-title { display: flex; justify-content: space-between; align-items: center; }
-.comments-title h3 { margin: 0; font-family: Georgia, serif; font-size: 1.5rem; }
+.comments-title h3 { margin: 0; font-family: var(--serif); font-size: 1.5rem; }
 .comments-title span { display: grid; place-items: center; min-width: 1.8rem; height: 1.8rem; border-radius: 999px; color: white; background: var(--moss); font-size: .8rem; }
 #comment-form { display: grid; gap: .65rem; margin-top: 1rem; }
 #comment-form label { font-weight: 750; }
@@ -280,15 +289,15 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
 .photo-grid img { display: block; width: 100%; aspect-ratio: 1; border-radius: .45rem; object-fit: cover; }
 .empty { color: var(--muted); }
 .empty-state { grid-column: 1 / -1; display: grid; gap: .3rem; padding: 2rem 1rem; border: 1px dashed var(--line); border-radius: .8rem; color: var(--muted); text-align: center; }
-.empty-state strong { color: var(--ink); font-family: Georgia, serif; font-size: 1.25rem; }
+.empty-state strong { color: var(--ink); font-family: var(--serif); font-size: 1.25rem; }
 
 .guide-main { padding-top: 2.5rem; }
 .guide-intro { display: grid; grid-template-columns: minmax(0, .9fr) minmax(280px, 1.1fr); gap: 2rem; align-items: end; margin-bottom: 2rem; }
 .guide-intro > p { margin: 0; color: var(--muted); font-size: 1.05rem; line-height: 1.7; }
 .quick-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: .75rem; margin-bottom: 3rem; }
 .quick-grid article { min-height: 190px; padding: 1rem; border: 1px solid var(--line); border-radius: .8rem; background: var(--card); }
-.quick-grid span { color: var(--moss); font-family: Georgia, serif; font-size: 1.7rem; }
-.quick-grid h3, .guide-card-grid h3 { margin: 1.5rem 0 .5rem; font-family: Georgia, serif; font-size: 1.2rem; }
+.quick-grid span { color: var(--moss); font-family: var(--serif); font-size: 1.7rem; }
+.quick-grid h3, .guide-card-grid h3 { margin: 1.5rem 0 .5rem; font-family: var(--serif); font-size: 1.2rem; }
 .quick-grid p, .guide-card-grid p { margin: 0; color: var(--muted); line-height: 1.5; }
 .guide-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: clamp(2rem, 5vw, 5rem); align-items: start; }
 .guide-index { position: sticky; top: 5.5rem; display: grid; gap: .25rem; padding: 1rem; border: 1px solid var(--line); border-radius: .75rem; background: rgba(255,253,247,.8); }
@@ -314,7 +323,7 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
 .fine-print { color: var(--muted); font-size: .8rem; line-height: 1.55; }
 .guide-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; }
 .guide-card-grid article { padding: 1.1rem; border: 1px solid var(--line); border-radius: .75rem; background: var(--card); }
-.guide-icon { color: var(--moss); font-family: Georgia, serif; font-size: 2rem; }
+.guide-icon { color: var(--moss); font-family: var(--serif); font-size: 2rem; }
 .guide-card-grid h3 { margin-top: .7rem; }
 .checklist-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: end; }
 .reset-checklists { padding: .55rem .75rem; border: 1px solid var(--line); border-radius: 999px; color: var(--forest); background: var(--card); cursor: pointer; }
@@ -323,7 +332,7 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
 .progress-text { color: var(--muted); font-size: .8rem; }
 .checklist-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
 .checklist-grid article { padding: 1rem; border: 1px solid var(--line); border-radius: .75rem; background: var(--card); }
-.checklist-grid h3 { margin: 0 0 .8rem; font-family: Georgia, serif; }
+.checklist-grid h3 { margin: 0 0 .8rem; font-family: var(--serif); }
 .checklist-grid label { display: grid; grid-template-columns: 1.1rem 1fr; gap: .55rem; align-items: start; padding: .45rem 0; color: var(--muted); font-size: .9rem; line-height: 1.4; cursor: pointer; }
 .checklist-grid input { width: 1rem; height: 1rem; margin: .1rem 0 0; accent-color: var(--green); }
 .community-intro { color: var(--muted); line-height: 1.6; }
@@ -347,7 +356,7 @@ footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align:
 }
 .map-popup { min-width: 230px; color: var(--ink); }
 .map-popup-title { display: flex; align-items: start; justify-content: space-between; gap: .6rem; margin-bottom: .3rem; }
-.map-popup-title strong { font-family: Georgia, serif; font-size: 1.05rem; }
+.map-popup-title strong { font-family: var(--serif); font-size: 1.05rem; }
 .map-popup-title .status-dot { margin-top: .25rem; }
 .map-popup > small { color: var(--muted); line-height: 1.4; }
 .popup-rating { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin: .7rem 0; }

@@ -21,7 +21,8 @@ Skandinavisch, ruhig, hochwertig und naturverbunden. Die Oberfläche nutzt groß
 ## Typografie
 
 - System-Sans für Navigation, Eingaben und Fließtext
-- Georgia für emotionale Überschriften und Kartentitel
+- Source Serif 4 Display für emotionale Überschriften und Kartentitel; lokal
+  eingebunden unter der SIL Open Font License 1.1
 - Eyebrows in Versalien mit deutlicher Laufweite
 
 ## Interaktion
@@ -47,4 +48,3 @@ Skandinavisch, ruhig, hochwertig und naturverbunden. Die Oberfläche nutzt groß
 - Schnellstartkarten im Guide sind mobil horizontal wischbar
 - Kapitelindex wird zu einer wischbaren Pill-Navigation
 - Karten und Dialoge nutzen die verfügbare Höhe
-

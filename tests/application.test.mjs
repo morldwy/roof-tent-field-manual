@@ -57,6 +57,17 @@ test("the supplied hero image exists and has no embedded EXIF marker", async () 
   assert.equal(image.includes(Buffer.from("GPS")), false);
 });
 
+test("the self-hosted serif includes its open font license", async () => {
+  const [styles, font, license] = await Promise.all([
+    read("styles.css"),
+    readFile(new URL("../assets/fonts/source-serif-4-display-regular.woff2", import.meta.url)),
+    read("assets/fonts/OFL-Source-Serif-4.md")
+  ]);
+  assert.match(styles, /Source Serif 4 Display/);
+  assert.ok(font.length > 50_000);
+  assert.match(license, /SIL OPEN FONT LICENSE Version 1\.1/);
+});
+
 test("repository contains no high-risk frontend secrets", async () => {
   const files = await Promise.all([
     read("supabase-config.js"),
