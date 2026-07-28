@@ -80,9 +80,41 @@ function markerIcon(spot) {
   });
 }
 
+function popupRating(spotId) {
+  const rating = Number(state.ratings[spotId] || 0);
+  const count = Number(state.ratingCounts[spotId] || 0);
+  const rounded = Math.round(rating);
+  const label = rating
+    ? `${rating} von 5 Sternen · ${count} Bewertung${count === 1 ? "" : "en"}`
+    : "Noch nicht bewertet";
+  return `
+    <div class="popup-rating" aria-label="${label}" title="${label}">
+      <span>${[1, 2, 3, 4, 5].map(value => `<i class="${value <= rounded ? "filled" : ""}">★</i>`).join("")}</span>
+      <small>${rating ? `${rating} (${count})` : "Noch offen"}</small>
+    </div>`;
+}
+
+function popupMarkup(spot) {
+  const navigationUrl = `https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}`;
+  return `
+    <div class="map-popup">
+      <div class="map-popup-title">
+        <strong>${spot.icon} ${escapeHtml(spot.name)}</strong>
+        <i class="status-dot ${spot.status}" title="${escapeHtml(spot.label)}"></i>
+      </div>
+      <small>${escapeHtml(spot.access)}</small>
+      ${popupRating(spot.id)}
+      <div class="map-popup-actions">
+        <button type="button" data-popup-detail="${spot.id}">Details</button>
+        <button type="button" data-popup-comments="${spot.id}">Kommentare</button>
+        <a href="${navigationUrl}" target="_blank" rel="noopener">Navigation ↗</a>
+      </div>
+    </div>`;
+}
+
 function addMarker(spot) {
   const marker = L.marker([spot.lat, spot.lng], { icon: markerIcon(spot) })
-    .bindPopup(`<strong>${spot.name}</strong><br>${spot.label}<br><small>${spot.access}</small>`)
+    .bindPopup(popupMarkup(spot), { minWidth: 245 })
     .addTo(map);
   markers.set(spot.id, marker);
 }
@@ -235,6 +267,7 @@ function render() {
 
   spots.forEach(spot => {
     const marker = markers.get(spot.id);
+    marker?.setPopupContent(popupMarkup(spot));
     const shouldShow = visible.includes(spot);
     if (shouldShow && !map.hasLayer(marker)) marker.addTo(map);
     if (!shouldShow && map.hasLayer(marker)) marker.removeFrom(map);
@@ -484,6 +517,22 @@ render();
 loadNearbySpots(searchCenter);
 
 map.on("moveend", scheduleNearbySearch);
+document.addEventListener("click", event => {
+  const detailButton = event.target.closest("[data-popup-detail]");
+  if (detailButton) {
+    map.closePopup();
+    openDetail(detailButton.dataset.popupDetail);
+    return;
+  }
+  const commentsButton = event.target.closest("[data-popup-comments]");
+  if (commentsButton) {
+    map.closePopup();
+    openDetail(commentsButton.dataset.popupComments);
+    setTimeout(() => {
+      detailContent.querySelector(".comments-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  }
+});
 map.on("click", event => {
   if (selectedLocationPin) {
     selectedLocationPin.setLatLng(event.latlng);

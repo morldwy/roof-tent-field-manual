@@ -301,6 +301,32 @@ footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align:
   border: 3px solid white; border-radius: 50%; color: white; box-shadow: 0 2px 8px #17372f88;
   font-size: .95rem;
 }
+.map-popup { min-width: 230px; color: var(--ink); }
+.map-popup-title { display: flex; align-items: start; justify-content: space-between; gap: .6rem; margin-bottom: .3rem; }
+.map-popup-title strong { font-family: Georgia, serif; font-size: 1.05rem; }
+.map-popup-title .status-dot { margin-top: .25rem; }
+.map-popup > small { color: var(--muted); line-height: 1.4; }
+.popup-rating { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin: .7rem 0; }
+.popup-rating span { display: flex; }
+.popup-rating i { color: #c9c5ba; font-style: normal; font-size: 1.15rem; line-height: 1; }
+.popup-rating i.filled { color: #e3a51c; }
+.popup-rating small { color: var(--muted); }
+.map-popup-actions { display: flex; flex-wrap: wrap; gap: .4rem; padding-top: .65rem; border-top: 1px solid var(--line); }
+.map-popup-actions button, .map-popup-actions a {
+  min-height: 2.15rem;
+  display: inline-flex;
+  align-items: center;
+  padding: .4rem .6rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--forest);
+  background: white;
+  cursor: pointer;
+  font-size: .76rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+.map-popup-actions button:hover, .map-popup-actions a:hover { border-color: var(--forest); background: var(--paper); }
 
 @media (max-width: 760px) {
   .topnav { position: static; align-items: stretch; flex-direction: column; gap: .55rem; padding: .7rem 1rem; }
