@@ -149,7 +149,7 @@ async function loadNearbySpots(center) {
 
     discovered = discovered
       .sort((a, b) => distanceKm(center, a) - distanceKm(center, b))
-      .slice(0, 30);
+      .slice(0, 100);
     const curatedNearby = curatedSpots.filter(spot => distanceKm(center, spot) <= searchRadius / 1000);
     const knownCoordinates = new Set(curatedNearby.map(spot => `${spot.lat.toFixed(3)}:${spot.lng.toFixed(3)}`));
     spots = [
