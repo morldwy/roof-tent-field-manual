@@ -1,4 +1,4 @@
-const spots = [
+const curatedSpots = [
   {
     id: "hessenstein", name: "Hessenstein & Panker", type: "wald", icon: "🌲",
     lat: 54.3308, lng: 10.5759, access: "Normaler Pkw · befestigte Zufahrt",
@@ -37,6 +37,8 @@ const spots = [
   }
 ];
 
+let spots = [...curatedSpots];
+
 const colors = { green: "#2e7d55", amber: "#d58a21", red: "#b64b3b" };
 const map = L.map("map", { zoomControl: false }).setView([54.325, 10.56], 11);
 L.control.zoom({ position: "bottomright" }).addTo(map);
@@ -51,6 +53,12 @@ const detailContent = document.querySelector("#detail-content");
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
 let activeFilter = "all";
 let activeSpotId = null;
+let searchRadius = Number(document.querySelector("#search-radius").value);
+let searchTimer = null;
+let osmRequest = null;
+let searchSequence = 0;
+let searchCenter = { lat: 54.325, lng: 10.56 };
+let selectedLocationPin = null;
 
 const backend = window.supabase.createClient(
   window.SUPABASE_CONFIG.url,
@@ -77,6 +85,138 @@ function addMarker(spot) {
     .bindPopup(`<strong>${spot.name}</strong><br>${spot.label}<br><small>${spot.access}</small>`)
     .addTo(map);
   markers.set(spot.id, marker);
+}
+
+function syncMarkers() {
+  const currentIds = new Set(spots.map(spot => spot.id));
+  for (const [id, marker] of markers) {
+    if (!currentIds.has(id)) {
+      marker.remove();
+      markers.delete(id);
+    }
+  }
+  spots.forEach(spot => {
+    if (!markers.has(spot.id)) addMarker(spot);
+  });
+}
+
+function distanceKm(a, b) {
+  const earthRadius = 6371;
+  const radians = value => value * Math.PI / 180;
+  const deltaLat = radians(b.lat - a.lat);
+  const deltaLng = radians(b.lng - a.lng);
+  const lat1 = radians(a.lat);
+  const lat2 = radians(b.lat);
+  const h = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+  return earthRadius * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function osmType(tags) {
+  if (tags.tourism === "viewpoint") return { type: "wald", icon: "🌅", title: "Aussichtspunkt" };
+  if (tags.tourism === "picnic_site" || tags.amenity === "picnic_table") return { type: "wald", icon: "🧺", title: "Picknickplatz" };
+  if (tags.leisure === "bird_hide") return { type: "see", icon: "🦆", title: "Vogelbeobachtung" };
+  if (tags.shelter_type === "picnic_shelter") return { type: "wald", icon: "🌲", title: "Schutzhütte" };
+  if (tags.natural === "beach") return { type: "meer", icon: "🌊", title: "Strand" };
+  return { type: "wald", icon: "🌲", title: "Naturort" };
+}
+
+function osmSpot(element) {
+  const lat = element.lat ?? element.center?.lat;
+  const lng = element.lon ?? element.center?.lon;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  const tags = element.tags || {};
+  const category = osmType(tags);
+  const name = tags.name || tags["name:de"] || category.title;
+  return {
+    id: `osm-${element.type}-${element.id}`,
+    name,
+    type: category.type,
+    icon: category.icon,
+    lat,
+    lng,
+    access: "Zufahrt und Parkmöglichkeit vor Ort prüfen",
+    status: "amber",
+    label: "Ungeprüfter Scout-Ort",
+    note: `${category.title} aus OpenStreetMap. Keine bestätigte Übernachtungserlaubnis; Beschilderung, Schutzstatus, Eigentum und Zufahrt vor Ort prüfen.`,
+    sourceUrl: `https://www.openstreetmap.org/${element.type}/${element.id}`,
+    discovered: true
+  };
+}
+
+function overpassQuery(lat, lng, radius) {
+  return `[out:json][timeout:18];
+(
+  nwr(around:${radius},${lat},${lng})["tourism"="viewpoint"]["access"!="private"]["access"!="no"];
+  nwr(around:${radius},${lat},${lng})["tourism"="picnic_site"]["access"!="private"]["access"!="no"];
+  nwr(around:${radius},${lat},${lng})["amenity"="picnic_table"]["access"!="private"]["access"!="no"];
+  nwr(around:${radius},${lat},${lng})["leisure"="bird_hide"]["access"!="private"]["access"!="no"];
+  nwr(around:${radius},${lat},${lng})["shelter_type"="picnic_shelter"]["access"!="private"]["access"!="no"];
+  nwr(around:${radius},${lat},${lng})["natural"="beach"]["access"!="private"]["access"!="no"];
+);
+out center tags;`;
+}
+
+function searchCacheKey(center) {
+  return `osm-spots:${center.lat.toFixed(2)}:${center.lng.toFixed(2)}:${searchRadius}`;
+}
+
+async function loadNearbySpots(center) {
+  const sequence = ++searchSequence;
+  searchCenter = center;
+  const status = document.querySelector("#search-status");
+  status.textContent = "Naturorte werden geladen …";
+  const key = searchCacheKey(center);
+  let elements;
+  const cached = sessionStorage.getItem(key);
+
+  try {
+    if (cached) {
+      elements = JSON.parse(cached);
+    } else {
+      osmRequest?.abort();
+      osmRequest = new AbortController();
+      const response = await fetch("https://overpass-api.de/api/interpreter", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: new URLSearchParams({ data: overpassQuery(center.lat, center.lng, searchRadius) }),
+        signal: osmRequest.signal
+      });
+      if (!response.ok) throw new Error(`Overpass ${response.status}`);
+      elements = (await response.json()).elements || [];
+      sessionStorage.setItem(key, JSON.stringify(elements));
+    }
+    if (sequence !== searchSequence) return;
+
+    const discovered = elements
+      .map(osmSpot)
+      .filter(Boolean)
+      .sort((a, b) => distanceKm(center, a) - distanceKm(center, b))
+      .slice(0, 30);
+    const curatedNearby = curatedSpots.filter(spot => distanceKm(center, spot) <= searchRadius / 1000);
+    const knownCoordinates = new Set(curatedNearby.map(spot => `${spot.lat.toFixed(3)}:${spot.lng.toFixed(3)}`));
+    spots = [
+      ...curatedNearby,
+      ...discovered.filter(spot => !knownCoordinates.has(`${spot.lat.toFixed(3)}:${spot.lng.toFixed(3)}`))
+    ];
+    syncMarkers();
+    render();
+    status.textContent = `${spots.length} Orte im Umkreis von ${searchRadius / 1000} km`;
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    console.error("Nearby search failed", error);
+    const curatedNearby = curatedSpots.filter(spot => distanceKm(center, spot) <= searchRadius / 1000);
+    spots = curatedNearby;
+    syncMarkers();
+    render();
+    status.textContent = "Live-Suche gerade nicht erreichbar – gespeicherte Orte werden angezeigt";
+  }
+}
+
+function scheduleNearbySearch() {
+  clearTimeout(searchTimer);
+  const center = map.getCenter();
+  document.querySelector("#search-status").textContent = "Kartenausschnitt gewählt …";
+  searchTimer = setTimeout(() => loadNearbySpots({ lat: center.lat, lng: center.lng }), 700);
 }
 
 function starRating(spotId, compact = false) {
@@ -195,6 +335,7 @@ function renderDetail(spotId) {
         <div><dt>Übernachtung</dt><dd>${spot.label}</dd></div>
       </dl>
       <a class="navigation-button" href="https://www.google.com/maps/dir/?api=1&destination=${destination}" target="_blank" rel="noopener">Navigation starten ↗</a>
+      ${spot.sourceUrl ? `<a class="source-link" href="${spot.sourceUrl}" target="_blank" rel="noopener">Quelle: OpenStreetMap ↗</a>` : ""}
 
       <section class="comments-section">
         <div class="comments-title">
@@ -363,6 +504,28 @@ async function initializeBackend() {
 
 spots.forEach(addMarker);
 render();
+loadNearbySpots(searchCenter);
+
+map.on("moveend", scheduleNearbySearch);
+map.on("click", event => {
+  if (selectedLocationPin) {
+    selectedLocationPin.setLatLng(event.latlng);
+  } else {
+    selectedLocationPin = L.circleMarker(event.latlng, {
+      radius: 7,
+      color: "#fff",
+      weight: 3,
+      fillColor: "#17372f",
+      fillOpacity: 1
+    }).bindTooltip("Gewählter Standort").addTo(map);
+  }
+  map.panTo(event.latlng);
+  loadNearbySpots({ lat: event.latlng.lat, lng: event.latlng.lng });
+});
+document.querySelector("#search-radius").addEventListener("change", event => {
+  searchRadius = Number(event.target.value);
+  loadNearbySpots({ lat: map.getCenter().lat, lng: map.getCenter().lng });
+});
 
 document.querySelectorAll(".filter").forEach(button => {
   button.addEventListener("click", () => {
@@ -388,6 +551,7 @@ document.querySelector("#locate").addEventListener("click", () => {
       L.circleMarker(point, { radius: 8, color: "#fff", weight: 3, fillColor: "#2474b5", fillOpacity: 1 })
         .bindPopup("Dein Standort").addTo(map).openPopup();
       map.setView(point, 13);
+      loadNearbySpots({ lat: point[0], lng: point[1] });
     },
     () => alert("Der Standort konnte nicht ermittelt werden. Bitte erlaube den Zugriff in deinem Browser."),
     { enableHighAccuracy: true, timeout: 10000 }

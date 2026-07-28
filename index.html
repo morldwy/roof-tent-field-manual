@@ -32,12 +32,29 @@
       <button class="filter" data-filter="wald">🌲 Wald</button>
     </nav>
 
+    <div class="location-toolbar">
+      <div>
+        <strong>Suche im Kartenausschnitt</strong>
+        <span id="search-status">Naturorte werden geladen …</span>
+      </div>
+      <label for="search-radius">
+        Umkreis
+        <select id="search-radius">
+          <option value="5000">5 km</option>
+          <option value="15000" selected>15 km</option>
+          <option value="30000">30 km</option>
+          <option value="50000">50 km</option>
+        </select>
+      </label>
+    </div>
+
     <section id="map" aria-label="Karte der Naturorte"></section>
 
     <div class="legend">
       <span><i class="dot green"></i> Erlaubnis dokumentiert</span>
       <span><i class="dot amber"></i> Erst Erlaubnis einholen</span>
       <span><i class="dot red"></i> Keine geplante Übernachtung</span>
+      <span>OpenStreetMap-Kandidaten sind ungeprüfte Tages- und Scout-Orte</span>
     </div>
 
     <section>

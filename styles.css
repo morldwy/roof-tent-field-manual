@@ -64,6 +64,21 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
 .filters { display: flex; gap: .5rem; overflow-x: auto; padding: .25rem 0 1rem; }
 .filter { border-color: var(--line); color: var(--ink); background: var(--card); white-space: nowrap; }
 .filter.active { border-color: var(--forest); color: white; background: var(--forest); }
+.location-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .75rem;
+  padding: .8rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: .75rem;
+  background: var(--card);
+}
+.location-toolbar strong { display: block; }
+.location-toolbar span { display: block; margin-top: .2rem; color: var(--muted); font-size: .8rem; }
+.location-toolbar label { display: flex; align-items: center; gap: .55rem; color: var(--muted); font-size: .82rem; font-weight: 750; }
+.location-toolbar select { padding: .45rem .65rem; border: 1px solid var(--line); border-radius: .45rem; color: var(--ink); background: white; }
 
 #map {
   height: min(58vh, 560px);
@@ -159,6 +174,7 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
 .detail-status .status-dot { margin: 0; box-shadow: 0 0 0 3px rgba(255,255,255,.12); }
 .detail-body { padding: clamp(1.25rem, 5vw, 2.5rem); }
 .detail-note { color: var(--muted); line-height: 1.6; }
+.source-link { display: inline-block; margin-left: .7rem; color: var(--forest); font-size: .82rem; font-weight: 700; }
 .facts { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin: 1.25rem 0; }
 .facts div { padding: .8rem; border-radius: .6rem; background: var(--paper); }
 .facts dt { margin-bottom: .25rem; color: var(--moss); font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
@@ -205,6 +221,7 @@ footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align:
 
 @media (max-width: 760px) {
   .hero { align-items: start; flex-direction: column; }
+  .location-toolbar { align-items: start; flex-direction: column; }
   .spot-grid { grid-template-columns: 1fr; }
   #map { min-height: 430px; }
   .detail-dialog { max-height: 100dvh; width: 100%; margin: auto 0 0; border-radius: 1rem 1rem 0 0; }

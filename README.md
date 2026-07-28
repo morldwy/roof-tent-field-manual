@@ -5,6 +5,12 @@ Pkw-Zufahrt, Navigation und bewusst strenger rechtlicher Ampel. Jeder Spot hat
 eine Detailansicht, eine persönliche 5-Sterne-Bewertung sowie Kommentare mit
 Zeitstempel und Foto-Uploads.
 
+Die angezeigten Orte folgen dynamisch dem gewählten Kartenausschnitt. Kuratierte
+Orte werden mit passenden OpenStreetMap-Kandidaten aus der Overpass API ergänzt.
+Automatisch gefundene Orte sind ausdrücklich als ungeprüfte Scout-Orte markiert;
+sie stellen keine bestätigte Übernachtungserlaubnis dar. Ergebnisse werden pro
+Browsersitzung gecacht und Anfragen nach Kartenbewegungen gebündelt.
+
 Bewertungen, Kommentare und Fotos werden über Supabase geräteübergreifend
 gespeichert. Die App nutzt anonyme Supabase-Sitzungen und Row Level Security,
 damit jeder Besucher ohne Registrierung beitragen kann und dennoch nur unter
