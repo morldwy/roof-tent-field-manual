@@ -5,6 +5,12 @@ Pkw-Zufahrt, Navigation und bewusst strenger rechtlicher Ampel. Jeder Spot hat
 eine Detailansicht, eine persönliche 5-Sterne-Bewertung sowie Kommentare mit
 Zeitstempel und Foto-Uploads.
 
+Die Topnavigation verbindet die Standortsuche mit einem mobilen Dachzelt-Guide
+für das Autohome Columbus Variant. Der Guide enthält Praxisabläufe, lokal
+gespeicherte Checklisten und moderierte Community-Tipps. Neue UGC-Beiträge
+landen zunächst mit Status `pending` in Supabase und werden erst nach
+redaktioneller Freigabe öffentlich sichtbar.
+
 Die angezeigten Orte folgen dynamisch dem sichtbaren Kartenausschnitt; beim
 Herauszoomen werden entsprechend größere Regionen bis zur Länderübersicht geladen. Kuratierte
 Orte werden mit passenden OpenStreetMap-Kandidaten ergänzt. Ein kontrollierter

@@ -18,6 +18,28 @@
 body { margin: 0; min-height: 100vh; }
 button, a { font: inherit; }
 
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 4rem;
+  padding: .65rem clamp(1rem, 5vw, 4rem);
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  color: white;
+  background: rgba(18, 52, 43, .97);
+  backdrop-filter: blur(12px);
+}
+.brand { display: flex; align-items: center; gap: .55rem; color: white; font-family: Georgia, serif; font-size: 1.05rem; text-decoration: none; }
+.brand span { color: #b9ca9c; font-size: .85rem; }
+.topnav-links { display: flex; gap: .35rem; }
+.topnav-links a { padding: .6rem .85rem; border-radius: 999px; color: #d6e4dc; font-size: .86rem; font-weight: 750; text-decoration: none; white-space: nowrap; }
+.topnav-links a:hover, .topnav-links a:focus-visible { background: rgba(255,255,255,.1); }
+.topnav-links a.active { color: var(--ink); background: #f4f0e5; }
+
 .hero {
   display: flex;
   justify-content: space-between;
@@ -51,6 +73,7 @@ h2 { font-size: clamp(1.7rem, 4vw, 2.5rem); }
 }
 .locate { flex: 0 0 auto; color: white; background: rgba(255,255,255,.08); }
 .locate:hover, .locate:focus-visible { background: rgba(255,255,255,.18); }
+.guide-cta { text-decoration: none; }
 
 main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0 3rem; }
 .notice {
@@ -214,6 +237,62 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
 .photo-grid img { display: block; width: 100%; aspect-ratio: 1; border-radius: .45rem; object-fit: cover; }
 .empty { color: var(--muted); }
 
+.guide-main { padding-top: 2.5rem; }
+.guide-intro { display: grid; grid-template-columns: minmax(0, .9fr) minmax(280px, 1.1fr); gap: 2rem; align-items: end; margin-bottom: 2rem; }
+.guide-intro > p { margin: 0; color: var(--muted); font-size: 1.05rem; line-height: 1.7; }
+.quick-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: .75rem; margin-bottom: 3rem; }
+.quick-grid article { min-height: 190px; padding: 1rem; border: 1px solid var(--line); border-radius: .8rem; background: var(--card); }
+.quick-grid span { color: var(--moss); font-family: Georgia, serif; font-size: 1.7rem; }
+.quick-grid h3, .guide-card-grid h3 { margin: 1.5rem 0 .5rem; font-family: Georgia, serif; font-size: 1.2rem; }
+.quick-grid p, .guide-card-grid p { margin: 0; color: var(--muted); line-height: 1.5; }
+.guide-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: clamp(2rem, 5vw, 5rem); align-items: start; }
+.guide-index { position: sticky; top: 5.5rem; display: grid; gap: .25rem; padding: 1rem; border: 1px solid var(--line); border-radius: .75rem; background: rgba(255,253,247,.8); }
+.guide-index a { padding: .45rem .55rem; border-radius: .35rem; color: var(--forest); font-size: .88rem; font-weight: 700; text-decoration: none; }
+.guide-index a:hover { background: var(--paper); }
+.guide-content { min-width: 0; }
+.guide-chapter { padding: 1rem 0 3.5rem; scroll-margin-top: 5rem; }
+.guide-chapter h2 { margin-bottom: 1.25rem; }
+.permission-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+.permission-cards article { padding: 1rem; border: 1px solid var(--line); border-radius: .65rem; background: var(--card); }
+.permission-cards strong { margin-left: .2rem; }
+.permission-cards p { margin: .6rem 0 0; color: var(--muted); line-height: 1.5; }
+.callout { margin: 1rem 0; padding: 1rem 1.1rem; border-left: 4px solid var(--moss); border-radius: .45rem; background: #edf4e9; line-height: 1.55; }
+.callout.warning { border-color: var(--amber); background: #fff4dc; }
+.field-list { display: grid; gap: .7rem; padding-left: 1.2rem; color: var(--muted); line-height: 1.55; }
+.field-list li::marker { color: var(--moss); }
+.step-list { display: grid; gap: .65rem; padding: 0; list-style: none; counter-reset: none; }
+.step-list li { display: grid; grid-template-columns: 2.4rem 1fr; gap: .9rem; align-items: start; padding: 1rem; border: 1px solid var(--line); border-radius: .7rem; background: var(--card); }
+.step-list li > span { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%; color: white; background: var(--forest); font-weight: 800; }
+.step-list strong { display: block; margin-top: .15rem; }
+.step-list p { margin: .35rem 0 0; color: var(--muted); line-height: 1.5; }
+.compact-steps li { padding: .8rem 1rem; }
+.fine-print { color: var(--muted); font-size: .8rem; line-height: 1.55; }
+.guide-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; }
+.guide-card-grid article { padding: 1.1rem; border: 1px solid var(--line); border-radius: .75rem; background: var(--card); }
+.guide-icon { color: var(--moss); font-family: Georgia, serif; font-size: 2rem; }
+.guide-card-grid h3 { margin-top: .7rem; }
+.checklist-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: end; }
+.reset-checklists { padding: .55rem .75rem; border: 1px solid var(--line); border-radius: 999px; color: var(--forest); background: var(--card); cursor: pointer; }
+.checklist-progress { height: .5rem; margin-top: 1.25rem; overflow: hidden; border-radius: 999px; background: var(--line); }
+.checklist-progress span { display: block; width: 0; height: 100%; background: var(--green); transition: width .2s ease; }
+.progress-text { color: var(--muted); font-size: .8rem; }
+.checklist-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+.checklist-grid article { padding: 1rem; border: 1px solid var(--line); border-radius: .75rem; background: var(--card); }
+.checklist-grid h3 { margin: 0 0 .8rem; font-family: Georgia, serif; }
+.checklist-grid label { display: grid; grid-template-columns: 1.1rem 1fr; gap: .55rem; align-items: start; padding: .45rem 0; color: var(--muted); font-size: .9rem; line-height: 1.4; cursor: pointer; }
+.checklist-grid input { width: 1rem; height: 1rem; margin: .1rem 0 0; accent-color: var(--green); }
+.community-intro { color: var(--muted); line-height: 1.6; }
+.community-tips { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; margin: 1.2rem 0; }
+.community-tips article { padding: 1rem; border: 1px solid var(--line); border-radius: .7rem; background: var(--card); }
+.community-tips span { color: var(--moss); font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.community-tips p { margin: .55rem 0 0; line-height: 1.55; }
+.tip-form { display: grid; gap: .6rem; margin-top: 1rem; padding: 1.1rem; border: 1px solid var(--line); border-radius: .75rem; background: var(--card); }
+.tip-form label { font-weight: 750; }
+.tip-form select, .tip-form textarea { width: 100%; padding: .75rem; border: 1px solid var(--line); border-radius: .5rem; color: var(--ink); background: white; }
+.tip-form textarea { resize: vertical; }
+.submit-tip { width: fit-content; padding: .7rem 1rem; border: 0; border-radius: 999px; color: white; background: var(--forest); font-weight: 750; cursor: pointer; }
+.submit-tip:disabled { opacity: .6; cursor: wait; }
+
 footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align: center; font-size: .85rem; }
 
 .spot-marker {
@@ -223,6 +302,10 @@ footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align:
 }
 
 @media (max-width: 760px) {
+  .topnav { align-items: stretch; flex-direction: column; padding: .7rem 1rem; }
+  .brand { justify-content: center; }
+  .topnav-links { display: grid; grid-template-columns: 1fr 1fr; }
+  .topnav-links a { text-align: center; }
   .hero { align-items: start; flex-direction: column; }
   .filter-groups { grid-template-columns: 1fr; gap: 0; }
   .location-toolbar { align-items: start; flex-direction: column; }
@@ -231,4 +314,9 @@ footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align:
   .detail-dialog { max-height: 100dvh; width: 100%; margin: auto 0 0; border-radius: 1rem 1rem 0 0; }
   .facts { grid-template-columns: 1fr; }
   .photo-grid { grid-template-columns: repeat(2, 1fr); }
+  .guide-intro, .guide-layout { grid-template-columns: 1fr; }
+  .quick-grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; }
+  .quick-grid article { flex: 0 0 78vw; scroll-snap-align: start; }
+  .guide-index { position: static; grid-template-columns: repeat(2, 1fr); }
+  .permission-cards, .guide-card-grid, .checklist-grid, .community-tips { grid-template-columns: 1fr; }
 }
