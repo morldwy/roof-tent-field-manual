@@ -1,0 +1,15 @@
+{
+  "name": "roof-tent-field-manual",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mobile-first roof tent guide and Supabase-backed scout spot map.",
+  "scripts": {
+    "check": "node --check app.js && node --check backend.js && node --check guide.js && node --check scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "build": "node scripts/build.mjs",
+    "verify": "npm run check && npm test && npm run build"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
