@@ -29,21 +29,43 @@ function query(lat: number, lng: number, radius: number) {
 out center tags;`;
 }
 
-function category(tags: Record<string, string>) {
+function coastlineQuery(lat: number, lng: number, radius: number) {
+  return `[out:json][timeout:22];
+way(around:${radius + 2000},${lat},${lng})["natural"="coastline"];
+out geom;`;
+}
+
+function coastlinePoints(elements: any[]) {
+  return elements
+    .filter(element => element.tags?.natural === "coastline")
+    .flatMap(element => element.geometry || [])
+    .map(point => ({ lat: point.lat, lng: point.lon }));
+}
+
+function isCoastal(point: { lat: number; lng: number }, coast: { lat: number; lng: number }[]) {
+  return coast.some(coastPoint => distanceKm(point, coastPoint) <= 2);
+}
+
+function category(tags: Record<string, string>, coastal = false) {
   if (tags.tourism === "viewpoint") return { type: "wald", icon: "🌅", title: "Aussichtspunkt" };
   if (tags.tourism === "picnic_site" || tags.amenity === "picnic_table") return { type: "wald", icon: "🧺", title: "Picknickplatz" };
   if (tags.leisure === "bird_hide") return { type: "see", icon: "🦆", title: "Vogelbeobachtung" };
   if (tags.shelter_type === "picnic_shelter") return { type: "wald", icon: "🌲", title: "Schutzhütte" };
-  if (tags.natural === "beach") return { type: "meer", icon: "🌊", title: "Strand" };
+  if (tags.natural === "beach") {
+    return coastal
+      ? { type: "meer", icon: "🌊", title: "Meeresstrand" }
+      : { type: "see", icon: "🦆", title: "Badestrand am Binnengewässer" };
+  }
   return { type: "wald", icon: "🌲", title: "Naturort" };
 }
 
-function toSpot(element: any) {
+function toSpot(element: any, coast: { lat: number; lng: number }[]) {
   const lat = element.lat ?? element.center?.lat;
   const lng = element.lon ?? element.center?.lon;
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   const tags = element.tags || {};
-  const kind = category(tags);
+  if (tags.natural === "coastline") return null;
+  const kind = category(tags, isCoastal({ lat, lng }, coast));
   return {
     id: `osm-${element.type}-${element.id}`,
     name: tags.name || tags["name:de"] || kind.title,
@@ -88,6 +110,7 @@ export default {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("Invalid coordinates");
 
     let elements: any[] | null = null;
+    let coastElements: any[] = [];
     for (const endpoint of endpoints) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 12000);
@@ -103,6 +126,20 @@ export default {
         });
         if (!response.ok) continue;
         elements = (await response.json()).elements || [];
+        if (elements.some(element => element.tags?.natural === "beach")) {
+          const coastResponse = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+              "User-Agent": "RoofTentFieldManual/1.0 (GitHub Pages nature spot research)",
+            },
+            body: new URLSearchParams({ data: coastlineQuery(lat, lng, radius) }),
+            signal: controller.signal,
+          });
+          if (coastResponse.ok) {
+            coastElements = (await coastResponse.json()).elements || [];
+          }
+        }
         break;
       } catch {
         // Try the next provider.
@@ -113,8 +150,9 @@ export default {
     if (!elements) throw new Error("Research providers unavailable");
 
     const center = { lat, lng };
+    const coast = coastlinePoints(coastElements);
     const spots = elements
-      .map(toSpot)
+      .map(element => toSpot(element, coast))
       .filter(Boolean)
       .sort((a: any, b: any) => distanceKm(center, a) - distanceKm(center, b))
       .slice(0, 80);

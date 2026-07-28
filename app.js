@@ -154,7 +154,7 @@ function visibleSearchArea(center) {
 }
 
 function searchCacheKey(area) {
-  return `db-spots:v3:${area.south.toFixed(2)}:${area.north.toFixed(2)}:${area.west.toFixed(2)}:${area.east.toFixed(2)}`;
+  return `db-spots:v4:${area.south.toFixed(2)}:${area.north.toFixed(2)}:${area.west.toFixed(2)}:${area.east.toFixed(2)}`;
 }
 
 async function loadNearbySpots(center) {

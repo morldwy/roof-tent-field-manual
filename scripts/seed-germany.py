@@ -57,7 +57,38 @@ def query(lat, lng):
 out center tags;"""
 
 
-def category(tags):
+def coastline_query(lat, lng):
+    return f"""[out:json][timeout:28];
+way(around:52000,{lat},{lng})["natural"="coastline"];
+out geom;"""
+
+
+def distance_km(a, b):
+    radius = 6371
+    lat1, lat2 = math.radians(a[0]), math.radians(b[0])
+    delta_lat = lat2 - lat1
+    delta_lng = math.radians(b[1] - a[1])
+    value = (
+        math.sin(delta_lat / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lng / 2) ** 2
+    )
+    return radius * 2 * math.atan2(math.sqrt(value), math.sqrt(1 - value))
+
+
+def coastline_points(elements):
+    return [
+        (point["lat"], point["lon"])
+        for element in elements
+        if element.get("tags", {}).get("natural") == "coastline"
+        for point in element.get("geometry", [])
+    ]
+
+
+def is_coastal(lat, lng, coast):
+    return any(distance_km((lat, lng), point) <= 2 for point in coast)
+
+
+def category(tags, coastal=False):
     if tags.get("tourism") == "viewpoint":
         return "wald", "🌅", "Aussichtspunkt"
     if tags.get("tourism") == "picnic_site":
@@ -67,17 +98,23 @@ def category(tags):
     if tags.get("shelter_type") == "picnic_shelter":
         return "wald", "🌲", "Schutzhütte"
     if tags.get("natural") == "beach":
-        return "meer", "🌊", "Strand"
+        return (
+            ("meer", "🌊", "Meeresstrand")
+            if coastal
+            else ("see", "🦆", "Badestrand am Binnengewässer")
+        )
     return "wald", "🌲", "Naturort"
 
 
-def spot(element):
+def spot(element, coast):
     lat = element.get("lat", element.get("center", {}).get("lat"))
     lng = element.get("lon", element.get("center", {}).get("lon"))
     if lat is None or lng is None:
         return None
     tags = element.get("tags", {})
-    kind, icon, title = category(tags)
+    if tags.get("natural") == "coastline":
+        return None
+    kind, icon, title = category(tags, is_coastal(lat, lng, coast))
     return {
         "id": f"osm-{element['type']}-{element['id']}",
         "name": tags.get("name") or tags.get("name:de") or title,
@@ -95,16 +132,24 @@ def spot(element):
 
 
 def research(lat, lng):
-    form = urllib.parse.urlencode({"data": query(lat, lng)}).encode()
     for endpoint in OVERPASS:
         try:
-            req = urllib.request.Request(
-                endpoint,
-                data=form,
-                headers={"User-Agent": "ScandinavianFieldManual/1.0"},
-            )
-            with urllib.request.urlopen(req, timeout=40) as response:
-                return [item for item in (spot(e) for e in json.load(response)["elements"]) if item]
+            def fetch(overpass_query):
+                req = urllib.request.Request(
+                    endpoint,
+                    data=urllib.parse.urlencode({"data": overpass_query}).encode(),
+                    headers={"User-Agent": "RoofTentFieldManual/1.0"},
+                )
+                with urllib.request.urlopen(req, timeout=40) as response:
+                    return json.load(response)["elements"]
+
+            elements = fetch(query(lat, lng))
+            coast = coastline_points(fetch(coastline_query(lat, lng)))
+            return [
+                item
+                for item in (spot(element, coast) for element in elements)
+                if item
+            ]
         except Exception:
             continue
     raise RuntimeError("No research provider available")

@@ -31,8 +31,21 @@ test("map, filters, search and guide UGC remain present", async () => {
   assert.match(index, /id="spot-search"/);
   assert.match(index, /data-filter="meer"/);
   assert.match(index, /data-permission="amber"/);
+  assert.match(index, /verantwortungsvollen Übernachten in deinem Dachzelt/);
   assert.match(guide, /id="tip-form"/);
   assert.match(guide, /data-check="roof-locks"/);
+});
+
+test("OSM beaches distinguish coast from inland water", async () => {
+  const [seed, edge] = await Promise.all([
+    read("scripts/seed-germany.py"),
+    read("supabase/functions/discover-spots/index.ts")
+  ]);
+  for (const source of [seed, edge]) {
+    assert.match(source, /natural.{0,20}coastline/s);
+    assert.match(source, /Badestrand am Binnengewässer/);
+    assert.match(source, /Meeresstrand/);
+  }
 });
 
 test("the supplied hero image exists and has no embedded EXIF marker", async () => {
