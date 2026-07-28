@@ -53,6 +53,7 @@ const detailContent = document.querySelector("#detail-content");
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
 let activeFilter = "all";
 let activePermissionFilter = "all";
+let searchQuery = "";
 let activeSpotId = null;
 let searchRadius = Number(document.querySelector("#search-radius").value);
 let searchTimer = null;
@@ -60,10 +61,7 @@ let searchSequence = 0;
 let searchCenter = { lat: 54.325, lng: 10.56 };
 let selectedLocationPin = null;
 
-const backend = window.supabase.createClient(
-  window.SUPABASE_CONFIG.url,
-  window.SUPABASE_CONFIG.publishableKey
-);
+const backend = window.ROOF_TENT_BACKEND.client;
 const state = { ratings: {}, ratingCounts: {}, comments: {}, user: null, ready: false };
 
 function escapeHtml(value) {
@@ -258,11 +256,16 @@ function card(spot) {
 }
 
 function render() {
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase("de");
   const visible = spots.filter(spot =>
     (activeFilter === "all" || spot.type === activeFilter)
     && (activePermissionFilter === "all" || spot.status === activePermissionFilter)
+    && (!normalizedQuery || [spot.name, spot.access, spot.note, spot.label]
+      .some(value => String(value || "").toLocaleLowerCase("de").includes(normalizedQuery)))
   );
-  document.querySelector("#spots").innerHTML = visible.map(card).join("");
+  document.querySelector("#spots").innerHTML = visible.length
+    ? visible.map(card).join("")
+    : '<div class="empty-state"><strong>Keine passenden Orte</strong><span>Ändere die Suche, den Kartenausschnitt oder einen Filter.</span></div>';
   document.querySelector("#count").textContent = `${visible.length} Orte`;
 
   spots.forEach(spot => {
@@ -494,14 +497,8 @@ async function loadData() {
 
 async function initializeBackend() {
   try {
-    const { data: sessionData } = await backend.auth.getSession();
-    if (sessionData.session) {
-      state.user = sessionData.session.user;
-    } else {
-      const { data, error } = await backend.auth.signInAnonymously();
-      if (error) throw error;
-      state.user = data.user;
-    }
+    const session = await window.ROOF_TENT_BACKEND.ensureAnonymousSession();
+    state.user = session.user;
     await loadData();
   } catch (error) {
     console.error("Supabase initialization failed", error);
@@ -551,6 +548,11 @@ map.on("click", event => {
 document.querySelector("#search-radius").addEventListener("change", event => {
   searchRadius = Number(event.target.value);
   loadNearbySpots({ lat: map.getCenter().lat, lng: map.getCenter().lng });
+});
+
+document.querySelector("#spot-search").addEventListener("input", event => {
+  searchQuery = event.target.value;
+  render();
 });
 
 document.querySelectorAll(".type-filter").forEach(button => {

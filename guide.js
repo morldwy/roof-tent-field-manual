@@ -61,16 +61,8 @@ async function initializeCommunity() {
   const feedback = document.querySelector("#tip-feedback");
 
   try {
-    const backend = window.supabase.createClient(
-      window.SUPABASE_CONFIG.url,
-      window.SUPABASE_CONFIG.publishableKey
-    );
-    let { data: sessionData } = await backend.auth.getSession();
-    if (!sessionData.session) {
-      const { data, error } = await backend.auth.signInAnonymously();
-      if (error) throw error;
-      sessionData = { session: data.session };
-    }
+    const backend = window.ROOF_TENT_BACKEND.client;
+    const session = await window.ROOF_TENT_BACKEND.ensureAnonymousSession();
 
     const { data: tips, error: tipsError } = await backend
       .from("guide_tips")
@@ -96,7 +88,7 @@ async function initializeCommunity() {
       submit.disabled = true;
       feedback.textContent = "Tipp wird gespeichert …";
       const { error } = await backend.from("guide_tips").insert({
-        user_id: sessionData.session.user.id,
+        user_id: session.user.id,
         section,
         body
       });
