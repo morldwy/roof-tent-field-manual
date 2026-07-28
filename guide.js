@@ -1,5 +1,11 @@
-const checklistKey = "scandinavian-field-manual:guide-checklist";
+const checklistKey = "roof-tent-field-manual:guide-checklist";
+const previousChecklistKey = "scandinavian-field-manual:guide-checklist";
 const checkboxes = [...document.querySelectorAll("[data-check]")];
+
+if (!localStorage.getItem(checklistKey) && localStorage.getItem(previousChecklistKey)) {
+  localStorage.setItem(checklistKey, localStorage.getItem(previousChecklistKey));
+  localStorage.removeItem(previousChecklistKey);
+}
 
 function storedChecks() {
   try {

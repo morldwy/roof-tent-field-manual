@@ -134,7 +134,10 @@ def main():
     parser.add_argument("--lat", type=float)
     parser.add_argument("--lng", type=float)
     args = parser.parse_args()
-    state_file = pathlib.Path(f"/tmp/scandinavian-field-manual-seed-{args.region}.json")
+    state_file = pathlib.Path(f"/tmp/roof-tent-field-manual-seed-{args.region}.json")
+    previous_state_file = pathlib.Path(f"/tmp/scandinavian-field-manual-seed-{args.region}.json")
+    if not state_file.exists() and previous_state_file.exists():
+        state_file.write_text(previous_state_file.read_text())
     state = json.loads(state_file.read_text()) if state_file.exists() else {"next": 0, "imported": 0}
     points = grid(args.region)
     key = public_key()
