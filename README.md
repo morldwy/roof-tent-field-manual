@@ -1,4 +1,4 @@
-# Roof Tent Field Manual
+# Roof Tent Manual
 
 Eine mobile Karte für ruhige Naturorte rund um den gewählten Standort – mit Landschaftsfiltern,
 Pkw-Zufahrt, Navigation und bewusst strenger rechtlicher Ampel. Jeder Spot hat
