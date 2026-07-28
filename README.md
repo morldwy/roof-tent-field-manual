@@ -56,7 +56,8 @@ pnpm install
 pnpm run verify
 ```
 
-`verify` prüft die JavaScript-Syntax, führt Smoke- und Sicherheitsprüfungen aus
-und erzeugt anschließend einen statischen Produktions-Build unter `dist/`.
+`verify` prüft JavaScript-Syntax und Datenbanktypen, führt Smoke-, Sicherheits-
+und Asset-Prüfungen aus und erzeugt anschließend einen statischen
+Produktions-Build unter `dist/`.
 
 Die technische Dokumentation liegt unter [`docs/`](docs/).

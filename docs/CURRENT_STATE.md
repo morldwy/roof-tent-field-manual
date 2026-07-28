@@ -109,13 +109,11 @@ Am 28. Juli 2026 waren öffentlich lesbar:
 
 - keine Favoriten
 - keine Benutzerprofile
-- keine Suche nach Spot-Namen
 - keine Bottom Navigation
 - keine PWA-/Offline-Funktion
 - keine Marker-Cluster
-- keine TypeScript-Anwendung
-- keine generierten Supabase-Typen
-- keine automatisierten Tests, kein Linting und kein lokaler Produktions-Build
+- keine TypeScript-Browseranwendung; die Laufzeit bleibt bewusst JavaScript
+- kein vollständiges End-to-End-Browsertestpaket und kein allgemeiner Linter
 - kein Dark Mode
 
 ## Aktuelle Risiken
@@ -127,12 +125,21 @@ Am 28. Juli 2026 waren öffentlich lesbar:
 5. `user_id` ist über öffentliche Rating-Datensätze sichtbar, obwohl die IDs anonym sind.
 6. Hash-Deep-Links funktionieren nur, wenn der Zielspot im aktuell geladenen Datensatz liegt.
 7. Das dreistufige Spot-Schema unterstützt Orange und Grau aus dem zukünftigen Rechtsmodell noch nicht.
-8. Es fehlen reproduzierbare Build-, Test- und Qualitätsprüfungen.
+8. Die automatisierten Smoke-Tests prüfen Struktur und Kernpfade, ersetzen aber noch keine vollständigen Browser-End-to-End-Tests.
 
 ## Verifizierter Deployment-Stand
 
 - Lokaler Branch: `main`
-- Bei der Bestandsaufnahme geprüfter Commit: `7077c51`
+- Bei der Bestandsaufnahme geprüfter Ausgangs-Commit: `7077c51`
 - GitHub-Pages-Deployment: erfolgreich
 - Live-Startseite: HTTP 200
 - Live-Seite enthält aktuellen Produkttitel, Guide-Link und aktuelle Asset-Version.
+
+## Ergänzungen im Release-Kandidaten
+
+- Suche nach Spot-Namen, Beschreibung und Umgebung
+- zentrale Supabase-Client- und Session-Schicht
+- dokumentierte Datenbanktypen mit TypeScript-Prüfung
+- reproduzierbarer statischer Build
+- automatisierte Syntax-, Typ-, Smoke-, Sicherheits- und Asset-Prüfungen
+- CI-Qualitätsprüfung bei Änderungen an `main` und in Pull Requests
