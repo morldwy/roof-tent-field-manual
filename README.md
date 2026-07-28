@@ -46,3 +46,17 @@ Beschilderung, Wegerechte und lokale Regeln haben immer Vorrang.
 Die Anwendung besteht aus statischem HTML, CSS und JavaScript und kann direkt
 über GitHub Pages aus dem Hauptverzeichnis des `main`-Branches bereitgestellt
 werden.
+
+## Lokale Prüfung
+
+Voraussetzung: Node.js 20 oder neuer.
+
+```bash
+pnpm install
+pnpm run verify
+```
+
+`verify` prüft die JavaScript-Syntax, führt Smoke- und Sicherheitsprüfungen aus
+und erzeugt anschließend einen statischen Produktions-Build unter `dist/`.
+
+Die technische Dokumentation liegt unter [`docs/`](docs/).
