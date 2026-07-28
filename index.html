@@ -25,12 +25,26 @@
       Grün bedeutet dokumentierte Erlaubnis; Gelb ist ein Scout-Ort, an dem vorab eine Erlaubnis einzuholen ist.
     </section>
 
-    <nav class="filters" aria-label="Kartenfilter">
-      <button class="filter active" data-filter="all">Alle</button>
-      <button class="filter" data-filter="meer">🌊 Meer</button>
-      <button class="filter" data-filter="see">🦆 See</button>
-      <button class="filter" data-filter="wald">🌲 Wald</button>
-    </nav>
+    <section class="filter-groups" aria-label="Kartenfilter">
+      <div>
+        <span class="filter-label">Art des Ortes</span>
+        <nav class="filters" aria-label="Art des Ortes">
+          <button class="filter type-filter active" data-filter="all">Alle</button>
+          <button class="filter type-filter" data-filter="meer">🌊 Meer</button>
+          <button class="filter type-filter" data-filter="see">🦆 See</button>
+          <button class="filter type-filter" data-filter="wald">🌲 Wald</button>
+        </nav>
+      </div>
+      <div>
+        <span class="filter-label">Erlaubnis</span>
+        <nav class="filters" aria-label="Art der Erlaubnis">
+          <button class="filter permission-filter active" data-permission="all">Alle</button>
+          <button class="filter permission-filter" data-permission="green"><i class="dot green"></i> Dokumentiert</button>
+          <button class="filter permission-filter" data-permission="amber"><i class="dot amber"></i> Erst einholen</button>
+          <button class="filter permission-filter" data-permission="red"><i class="dot red"></i> Keine Übernachtung</button>
+        </nav>
+      </div>
+    </section>
 
     <div class="location-toolbar">
       <div>
@@ -60,7 +74,7 @@
     <section>
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Nah an Tröndel</p>
+          <p class="eyebrow">Im gewählten Umkreis</p>
           <h2>Orte zum Erkunden</h2>
         </div>
         <span id="count"></span>

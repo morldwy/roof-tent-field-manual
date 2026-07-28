@@ -52,10 +52,10 @@ const detailDialog = document.querySelector("#spot-detail");
 const detailContent = document.querySelector("#detail-content");
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
 let activeFilter = "all";
+let activePermissionFilter = "all";
 let activeSpotId = null;
 let searchRadius = Number(document.querySelector("#search-radius").value);
 let searchTimer = null;
-let osmRequest = null;
 let searchSequence = 0;
 let searchCenter = { lat: 54.325, lng: 10.56 };
 let selectedLocationPin = null;
@@ -111,53 +111,8 @@ function distanceKm(a, b) {
   return earthRadius * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
-function osmType(tags) {
-  if (tags.tourism === "viewpoint") return { type: "wald", icon: "🌅", title: "Aussichtspunkt" };
-  if (tags.tourism === "picnic_site" || tags.amenity === "picnic_table") return { type: "wald", icon: "🧺", title: "Picknickplatz" };
-  if (tags.leisure === "bird_hide") return { type: "see", icon: "🦆", title: "Vogelbeobachtung" };
-  if (tags.shelter_type === "picnic_shelter") return { type: "wald", icon: "🌲", title: "Schutzhütte" };
-  if (tags.natural === "beach") return { type: "meer", icon: "🌊", title: "Strand" };
-  return { type: "wald", icon: "🌲", title: "Naturort" };
-}
-
-function osmSpot(element) {
-  const lat = element.lat ?? element.center?.lat;
-  const lng = element.lon ?? element.center?.lon;
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  const tags = element.tags || {};
-  const category = osmType(tags);
-  const name = tags.name || tags["name:de"] || category.title;
-  return {
-    id: `osm-${element.type}-${element.id}`,
-    name,
-    type: category.type,
-    icon: category.icon,
-    lat,
-    lng,
-    access: "Zufahrt und Parkmöglichkeit vor Ort prüfen",
-    status: "amber",
-    label: "Ungeprüfter Scout-Ort",
-    note: `${category.title} aus OpenStreetMap. Keine bestätigte Übernachtungserlaubnis; Beschilderung, Schutzstatus, Eigentum und Zufahrt vor Ort prüfen.`,
-    sourceUrl: `https://www.openstreetmap.org/${element.type}/${element.id}`,
-    discovered: true
-  };
-}
-
-function overpassQuery(lat, lng, radius) {
-  return `[out:json][timeout:18];
-(
-  nwr(around:${radius},${lat},${lng})["tourism"="viewpoint"]["access"!="private"]["access"!="no"];
-  nwr(around:${radius},${lat},${lng})["tourism"="picnic_site"]["access"!="private"]["access"!="no"];
-  nwr(around:${radius},${lat},${lng})["amenity"="picnic_table"]["access"!="private"]["access"!="no"];
-  nwr(around:${radius},${lat},${lng})["leisure"="bird_hide"]["access"!="private"]["access"!="no"];
-  nwr(around:${radius},${lat},${lng})["shelter_type"="picnic_shelter"]["access"!="private"]["access"!="no"];
-  nwr(around:${radius},${lat},${lng})["natural"="beach"]["access"!="private"]["access"!="no"];
-);
-out center tags;`;
-}
-
 function searchCacheKey(center) {
-  return `osm-spots:${center.lat.toFixed(2)}:${center.lng.toFixed(2)}:${searchRadius}`;
+  return `db-spots:${center.lat.toFixed(2)}:${center.lng.toFixed(2)}:${searchRadius}`;
 }
 
 async function loadNearbySpots(center) {
@@ -166,30 +121,33 @@ async function loadNearbySpots(center) {
   const status = document.querySelector("#search-status");
   status.textContent = "Naturorte werden geladen …";
   const key = searchCacheKey(center);
-  let elements;
+  let discovered;
   const cached = sessionStorage.getItem(key);
 
   try {
     if (cached) {
-      elements = JSON.parse(cached);
+      discovered = JSON.parse(cached);
     } else {
-      osmRequest?.abort();
-      osmRequest = new AbortController();
-      const response = await fetch("https://overpass-api.de/api/interpreter", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-        body: new URLSearchParams({ data: overpassQuery(center.lat, center.lng, searchRadius) }),
-        signal: osmRequest.signal
-      });
-      if (!response.ok) throw new Error(`Overpass ${response.status}`);
-      elements = (await response.json()).elements || [];
-      sessionStorage.setItem(key, JSON.stringify(elements));
+      const latDelta = searchRadius / 111000;
+      const lngDelta = searchRadius / (111000 * Math.max(.2, Math.cos(center.lat * Math.PI / 180)));
+      const { data: stored, error: storedError } = await backend
+        .from("spots")
+        .select("id,name,type,icon,lat,lng,access,status,label,note,source_url,discovered")
+        .gte("lat", center.lat - latDelta)
+        .lte("lat", center.lat + latDelta)
+        .gte("lng", center.lng - lngDelta)
+        .lte("lng", center.lng + lngDelta)
+        .limit(120);
+      if (storedError) throw storedError;
+      discovered = (stored || [])
+        .map(spot => ({ ...spot, sourceUrl: spot.source_url }))
+        .filter(spot => distanceKm(center, spot) <= searchRadius / 1000);
+
+      sessionStorage.setItem(key, JSON.stringify(discovered));
     }
     if (sequence !== searchSequence) return;
 
-    const discovered = elements
-      .map(osmSpot)
-      .filter(Boolean)
+    discovered = discovered
       .sort((a, b) => distanceKm(center, a) - distanceKm(center, b))
       .slice(0, 30);
     const curatedNearby = curatedSpots.filter(spot => distanceKm(center, spot) <= searchRadius / 1000);
@@ -200,15 +158,16 @@ async function loadNearbySpots(center) {
     ];
     syncMarkers();
     render();
-    status.textContent = `${spots.length} Orte im Umkreis von ${searchRadius / 1000} km`;
+    status.textContent = spots.length
+      ? `${spots.length} Orte im Umkreis von ${searchRadius / 1000} km`
+      : `Noch keine gespeicherten Orte in diesem Umkreis`;
   } catch (error) {
-    if (error.name === "AbortError") return;
     console.error("Nearby search failed", error);
     const curatedNearby = curatedSpots.filter(spot => distanceKm(center, spot) <= searchRadius / 1000);
     spots = curatedNearby;
     syncMarkers();
     render();
-    status.textContent = "Live-Suche gerade nicht erreichbar – gespeicherte Orte werden angezeigt";
+    status.textContent = `${spots.length} gespeicherte Orte – Hintergrundrecherche vorübergehend nicht erreichbar`;
   }
 }
 
@@ -252,7 +211,10 @@ function card(spot) {
 }
 
 function render() {
-  const visible = spots.filter(spot => activeFilter === "all" || spot.type === activeFilter);
+  const visible = spots.filter(spot =>
+    (activeFilter === "all" || spot.type === activeFilter)
+    && (activePermissionFilter === "all" || spot.status === activePermissionFilter)
+  );
   document.querySelector("#spots").innerHTML = visible.map(card).join("");
   document.querySelector("#count").textContent = `${visible.length} Orte`;
 
@@ -527,10 +489,18 @@ document.querySelector("#search-radius").addEventListener("change", event => {
   loadNearbySpots({ lat: map.getCenter().lat, lng: map.getCenter().lng });
 });
 
-document.querySelectorAll(".filter").forEach(button => {
+document.querySelectorAll(".type-filter").forEach(button => {
   button.addEventListener("click", () => {
     activeFilter = button.dataset.filter;
-    document.querySelectorAll(".filter").forEach(item => item.classList.toggle("active", item === button));
+    document.querySelectorAll(".type-filter").forEach(item => item.classList.toggle("active", item === button));
+    render();
+  });
+});
+
+document.querySelectorAll(".permission-filter").forEach(button => {
+  button.addEventListener("click", () => {
+    activePermissionFilter = button.dataset.permission;
+    document.querySelectorAll(".permission-filter").forEach(item => item.classList.toggle("active", item === button));
     render();
   });
 });

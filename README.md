@@ -6,10 +6,15 @@ eine Detailansicht, eine persönliche 5-Sterne-Bewertung sowie Kommentare mit
 Zeitstempel und Foto-Uploads.
 
 Die angezeigten Orte folgen dynamisch dem gewählten Kartenausschnitt. Kuratierte
-Orte werden mit passenden OpenStreetMap-Kandidaten aus der Overpass API ergänzt.
+Orte werden mit passenden OpenStreetMap-Kandidaten ergänzt. Ein kontrollierter
+Hintergrundimport recherchiert diese Kandidaten regionsweise und speichert sie
+zentral in der Supabase-Tabelle `spots`. Die App fragt diese Daten anschließend
+schnell anhand des gewählten Kartenmittelpunkts und Umkreises ab.
 Automatisch gefundene Orte sind ausdrücklich als ungeprüfte Scout-Orte markiert;
 sie stellen keine bestätigte Übernachtungserlaubnis dar. Ergebnisse werden pro
 Browsersitzung gecacht und Anfragen nach Kartenbewegungen gebündelt.
+
+Ortsart und Erlaubnisstatus lassen sich unabhängig voneinander kombinieren.
 
 Bewertungen, Kommentare und Fotos werden über Supabase geräteübergreifend
 gespeichert. Die App nutzt anonyme Supabase-Sitzungen und Row Level Security,

@@ -61,9 +61,12 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
   background: #fff8e8;
   line-height: 1.5;
 }
+.filter-groups { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1rem 1.5rem; margin-bottom: .25rem; }
+.filter-label { display: block; margin-bottom: .25rem; color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .filters { display: flex; gap: .5rem; overflow-x: auto; padding: .25rem 0 1rem; }
 .filter { border-color: var(--line); color: var(--ink); background: var(--card); white-space: nowrap; }
 .filter.active { border-color: var(--forest); color: white; background: var(--forest); }
+.filter .dot { margin-right: .35rem; }
 .location-toolbar {
   display: flex;
   align-items: center;
@@ -221,6 +224,7 @@ footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align:
 
 @media (max-width: 760px) {
   .hero { align-items: start; flex-direction: column; }
+  .filter-groups { grid-template-columns: 1fr; gap: 0; }
   .location-toolbar { align-items: start; flex-direction: column; }
   .spot-grid { grid-template-columns: 1fr; }
   #map { min-height: 430px; }
