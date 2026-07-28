@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#183d34">
+  <title>Wild Spots · Scandinavian Field Manual</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Scandinavian Field Manual</p>
+      <h1>Wild Spots</h1>
+      <p class="intro">Ruhige Naturorte rund um Tröndel – zum Erkunden, Prüfen und verantwortungsvollen Übernachten.</p>
+    </div>
+    <button id="locate" class="locate" type="button" aria-label="Meinen Standort anzeigen">⌖ Standort</button>
+  </header>
+
+  <main>
+    <section class="notice" aria-label="Rechtlicher Hinweis">
+      <strong>Wichtig:</strong> Kein Ort ist allein deshalb ein legaler Übernachtungsplatz, weil dort kein Verbotsschild steht.
+      Grün bedeutet dokumentierte Erlaubnis; Gelb ist ein Scout-Ort, an dem vorab eine Erlaubnis einzuholen ist.
+    </section>
+
+    <nav class="filters" aria-label="Kartenfilter">
+      <button class="filter active" data-filter="all">Alle</button>
+      <button class="filter" data-filter="meer">🌊 Meer</button>
+      <button class="filter" data-filter="see">🦆 See</button>
+      <button class="filter" data-filter="wald">🌲 Wald</button>
+    </nav>
+
+    <section id="map" aria-label="Karte der Naturorte"></section>
+
+    <div class="legend">
+      <span><i class="dot green"></i> Erlaubnis dokumentiert</span>
+      <span><i class="dot amber"></i> Erst Erlaubnis einholen</span>
+      <span><i class="dot red"></i> Keine geplante Übernachtung</span>
+    </div>
+
+    <section>
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Nah an Tröndel</p>
+          <h2>Orte zum Erkunden</h2>
+        </div>
+        <span id="count"></span>
+      </div>
+      <div id="spots" class="spot-grid"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Leave no trace · Zufahrten freihalten · Schutzgebiete respektieren · Eigentümer fragen</p>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="app.js"></script>
+</body>
+</html>
