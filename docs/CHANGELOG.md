@@ -14,7 +14,6 @@ Alle wichtigen Änderungen dieses Projekts werden hier dokumentiert.
 - reproduzierbarer statischer Build
 - automatisierte Syntax-, Navigations-, Asset-, Sicherheits- und Smoke-Tests
 - reproduzierbare TypeScript-Prüfung der Datenbanktypen
-- CI-Qualitätsprüfung für Änderungen an `main` und Pull Requests
 
 ### Changed
 

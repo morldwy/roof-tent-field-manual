@@ -41,9 +41,10 @@ Es gibt keinen SPA-Router. Das ist für GitHub Pages robust und erlaubt direkte 
 `scripts/build.mjs` kopiert die produktiven statischen Dateien nach `dist/` und prüft die Produktidentität. GitHub Pages veröffentlicht weiterhin direkt aus dem Root von `main`; der Build dient in v0.1 als reproduzierbare Releaseprüfung und verändert den funktionierenden Deploymentprozess nicht.
 
 `pnpm run verify` prüft zusätzlich JavaScript-Syntax, die Datenbanktypen mit
-TypeScript sowie strukturelle Smoke-, Sicherheits- und Asset-Regeln. Der
-Workflow `.github/workflows/quality.yml` führt diese Prüfung bei Änderungen an
-`main` und in Pull Requests aus.
+TypeScript sowie strukturelle Smoke-, Sicherheits- und Asset-Regeln. Die
+Prüfung wird lokal und vor jedem Release ausgeführt. Eine zusätzliche
+GitHub-Actions-Qualitätsprüfung bleibt für einen späteren Stand mit passend
+eingeschränkter Workflow-Berechtigung vorgesehen.
 
 ## Bewusste Grenzen
 

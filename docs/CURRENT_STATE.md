@@ -142,4 +142,4 @@ Am 28. Juli 2026 waren öffentlich lesbar:
 - dokumentierte Datenbanktypen mit TypeScript-Prüfung
 - reproduzierbarer statischer Build
 - automatisierte Syntax-, Typ-, Smoke-, Sicherheits- und Asset-Prüfungen
-- CI-Qualitätsprüfung bei Änderungen an `main` und in Pull Requests
+- lokal und vor Releases ausführbare Qualitätsprüfung mit einem Befehl
