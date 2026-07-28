@@ -46,7 +46,23 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 }).addTo(map);
 
 const markers = new Map();
+const detailDialog = document.querySelector("#spot-detail");
+const detailContent = document.querySelector("#detail-content");
+const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
 let activeFilter = "all";
+let activeSpotId = null;
+
+const backend = window.supabase.createClient(
+  window.SUPABASE_CONFIG.url,
+  window.SUPABASE_CONFIG.publishableKey
+);
+const state = { ratings: {}, ratingCounts: {}, comments: {}, user: null, ready: false };
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+  })[char]);
+}
 
 function markerIcon(spot) {
   return L.divIcon({
@@ -63,19 +79,34 @@ function addMarker(spot) {
   markers.set(spot.id, marker);
 }
 
+function starRating(spotId, compact = false) {
+  const rating = Number(state.ratings[spotId] || 0);
+  const count = Number(state.ratingCounts[spotId] || 0);
+  const label = rating ? `${rating} von 5 Sternen${count ? ` · ${count} Bewertung${count === 1 ? "" : "en"}` : ""}` : "Noch nicht bewertet";
+  return `
+    <div class="rating${compact ? " compact" : ""}" role="group" aria-label="Bewertung: ${label}" data-rating="${rating}">
+      ${[1, 2, 3, 4, 5].map(value => `
+        <button type="button" class="star${value <= rating ? " selected" : ""}" data-rate="${value}" data-spot="${spotId}"
+          aria-label="${value} Stern${value === 1 ? "" : "e"}" title="${value} Stern${value === 1 ? "" : "e"}">★</button>
+      `).join("")}
+      <span class="rating-label">${label}</span>
+    </div>`;
+}
+
 function card(spot) {
-  const destination = `${spot.lat},${spot.lng}`;
+  const commentCount = (state.comments[spot.id] || []).length;
   return `
     <article class="spot">
       <div class="spot-top">
         <h3>${spot.icon} ${spot.name}</h3>
-        <span class="badge ${spot.status}">${spot.label}</span>
+        <span class="status-dot ${spot.status}" title="${spot.label}" aria-label="${spot.label}"></span>
       </div>
+      ${starRating(spot.id, true)}
       <div class="meta">${spot.access}</div>
       <p>${spot.note}</p>
       <div class="actions">
+        <button class="open-detail" data-id="${spot.id}">Details & Kommentare${commentCount ? ` (${commentCount})` : ""}</button>
         <button class="show-map" data-id="${spot.id}">Auf Karte</button>
-        <a href="https://www.google.com/maps/dir/?api=1&destination=${destination}" target="_blank" rel="noopener">Navigation ↗</a>
       </div>
     </article>`;
 }
@@ -92,6 +123,7 @@ function render() {
     if (!shouldShow && map.hasLayer(marker)) marker.removeFrom(map);
   });
 
+  bindRatingButtons(document.querySelector("#spots"));
   document.querySelectorAll(".show-map").forEach(button => {
     button.addEventListener("click", () => {
       const spot = spots.find(item => item.id === button.dataset.id);
@@ -100,6 +132,233 @@ function render() {
       document.querySelector("#map").scrollIntoView({ behavior: "smooth", block: "center" });
     });
   });
+  document.querySelectorAll(".open-detail").forEach(button => {
+    button.addEventListener("click", () => openDetail(button.dataset.id));
+  });
+}
+
+function bindRatingButtons(container) {
+  container.querySelectorAll("[data-rate]").forEach(button => {
+    button.addEventListener("click", async () => saveRating(button.dataset.spot, Number(button.dataset.rate)));
+  });
+}
+
+async function saveRating(spotId, value) {
+  if (!state.user) return alert("Die Datenbankverbindung wird noch hergestellt. Bitte versuche es gleich erneut.");
+  const previous = state.ratings[spotId];
+  state.ratings[spotId] = value;
+  render();
+  if (activeSpotId) renderDetail(activeSpotId);
+  const { error } = await backend.from("ratings").upsert(
+    { spot_id: spotId, user_id: state.user.id, value, updated_at: new Date().toISOString() },
+    { onConflict: "spot_id,user_id" }
+  );
+  if (error) {
+    state.ratings[spotId] = previous;
+    render();
+    if (activeSpotId) renderDetail(activeSpotId);
+    alert("Die Bewertung konnte nicht gespeichert werden. Ist die Supabase-Einrichtung vollständig?");
+  } else {
+    await loadData();
+  }
+}
+
+function commentMarkup(comment) {
+  return `
+    <article class="comment">
+      <time datetime="${comment.created_at}">${dateFormatter.format(new Date(comment.created_at))}</time>
+      <p>${escapeHtml(comment.body).replace(/\n/g, "<br>")}</p>
+      ${comment.photos?.length ? `
+        <div class="photo-grid">
+          ${comment.photos.map(photo => `<a href="${photo.url}" target="_blank"><img src="${photo.url}" alt="Foto zum Kommentar" loading="lazy"></a>`).join("")}
+        </div>` : ""}
+    </article>`;
+}
+
+function renderDetail(spotId) {
+  const spot = spots.find(item => item.id === spotId);
+  if (!spot) return;
+  const comments = state.comments[spot.id] || [];
+  const destination = `${spot.lat},${spot.lng}`;
+  detailContent.innerHTML = `
+    <div class="detail-head">
+      <button type="button" class="close-detail" aria-label="Detailansicht schließen">×</button>
+      <p class="eyebrow">${spot.type} · ${spot.lat.toFixed(4)}, ${spot.lng.toFixed(4)}</p>
+      <h2>${spot.icon} ${spot.name}</h2>
+      <div class="detail-status"><span class="status-dot ${spot.status}"></span>${spot.label}</div>
+    </div>
+    <div class="detail-body">
+      ${starRating(spot.id)}
+      <p class="detail-note">${spot.note}</p>
+      <dl class="facts">
+        <div><dt>Zufahrt</dt><dd>${spot.access}</dd></div>
+        <div><dt>Übernachtung</dt><dd>${spot.label}</dd></div>
+      </dl>
+      <a class="navigation-button" href="https://www.google.com/maps/dir/?api=1&destination=${destination}" target="_blank" rel="noopener">Navigation starten ↗</a>
+
+      <section class="comments-section">
+        <div class="comments-title">
+          <h3>Kommentare & Fotos</h3>
+          <span>${comments.length}</span>
+        </div>
+        <form id="comment-form">
+          <label for="comment-text">Dein Kommentar</label>
+          <textarea id="comment-text" name="comment" rows="4" maxlength="1000" required placeholder="Wie war der Spot? Zufahrt, Ruhe, Aussicht …"></textarea>
+          <label for="comment-photos" class="photo-picker">📷 Fotos hinzufügen <small>bis zu 4</small></label>
+          <input id="comment-photos" name="photos" type="file" accept="image/*" multiple>
+          <div id="photo-preview" class="photo-preview"></div>
+          <button class="submit-comment" type="submit">Kommentar speichern</button>
+          <p class="storage-note">${state.ready ? "Geräteübergreifend über Supabase gespeichert." : "Datenbankverbindung wird hergestellt …"}</p>
+        </form>
+        <div class="comments-list">
+          ${comments.length ? comments.slice().reverse().map(commentMarkup).join("") : '<p class="empty">Noch keine Kommentare. Halte deine erste Erfahrung fest.</p>'}
+        </div>
+      </section>
+    </div>`;
+
+  detailContent.querySelector(".close-detail").addEventListener("click", closeDetail);
+  bindRatingButtons(detailContent);
+  const fileInput = detailContent.querySelector("#comment-photos");
+  fileInput.addEventListener("change", () => previewFiles(fileInput.files));
+  detailContent.querySelector("#comment-form").addEventListener("submit", saveComment);
+}
+
+function openDetail(spotId) {
+  activeSpotId = spotId;
+  renderDetail(spotId);
+  if (!detailDialog.open) detailDialog.showModal();
+  history.replaceState(null, "", `#spot/${spotId}`);
+}
+
+function closeDetail() {
+  activeSpotId = null;
+  detailDialog.close();
+  history.replaceState(null, "", location.pathname + location.search);
+}
+
+function previewFiles(files) {
+  const preview = detailContent.querySelector("#photo-preview");
+  const selected = [...files].slice(0, 4);
+  preview.innerHTML = selected.map(file => `<span>${escapeHtml(file.name)}</span>`).join("");
+}
+
+function resizeImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = reject;
+      image.onload = () => {
+        const max = 1400;
+        const scale = Math.min(1, max / Math.max(image.width, image.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(image.width * scale);
+        canvas.height = Math.round(image.height * scale);
+        canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", .78));
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function saveComment(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const submit = form.querySelector(".submit-comment");
+  const text = form.elements.comment.value.trim();
+  const files = [...form.elements.photos.files].slice(0, 4);
+  if (!text) return;
+  if (!state.user) return alert("Die Datenbankverbindung wird noch hergestellt. Bitte versuche es gleich erneut.");
+
+  submit.disabled = true;
+  submit.textContent = "Wird gespeichert …";
+  try {
+    const commentId = crypto.randomUUID();
+    const { error: commentError } = await backend.from("comments").insert({
+      id: commentId,
+      spot_id: activeSpotId,
+      user_id: state.user.id,
+      body: text
+    });
+    if (commentError) throw commentError;
+
+    for (const file of files) {
+      const dataUrl = await resizeImage(file);
+      const blob = await (await fetch(dataUrl)).blob();
+      const path = `${state.user.id}/${commentId}/${crypto.randomUUID()}.jpg`;
+      const { error: uploadError } = await backend.storage
+        .from("spot-photos")
+        .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+      if (uploadError) throw uploadError;
+      const { error: photoError } = await backend.from("comment_photos").insert({
+        comment_id: commentId,
+        user_id: state.user.id,
+        storage_path: path
+      });
+      if (photoError) throw photoError;
+    }
+    await loadData();
+    renderDetail(activeSpotId);
+  } catch (error) {
+    console.error(error);
+    alert("Der Beitrag konnte nicht vollständig gespeichert werden. Prüfe bitte die Supabase-Einrichtung.");
+    submit.disabled = false;
+    submit.textContent = "Kommentar speichern";
+  }
+}
+
+async function loadData() {
+  const [{ data: ratings, error: ratingsError }, { data: comments, error: commentsError }] = await Promise.all([
+    backend.from("ratings").select("spot_id,user_id,value"),
+    backend.from("comments").select("id,spot_id,body,created_at,comment_photos(storage_path)").order("created_at", { ascending: true })
+  ]);
+  if (ratingsError || commentsError) throw ratingsError || commentsError;
+
+  state.ratings = {};
+  state.ratingCounts = {};
+  const totals = {};
+  for (const rating of ratings) {
+    totals[rating.spot_id] = (totals[rating.spot_id] || 0) + rating.value;
+    state.ratingCounts[rating.spot_id] = (state.ratingCounts[rating.spot_id] || 0) + 1;
+    if (rating.user_id === state.user?.id) state.ratings[rating.spot_id] = rating.value;
+  }
+  for (const spotId of Object.keys(totals)) {
+    if (!state.ratings[spotId]) state.ratings[spotId] = Math.round(totals[spotId] / state.ratingCounts[spotId]);
+  }
+
+  state.comments = {};
+  for (const comment of comments) {
+    comment.photos = (comment.comment_photos || []).map(photo => ({
+      url: backend.storage.from("spot-photos").getPublicUrl(photo.storage_path).data.publicUrl
+    }));
+    (state.comments[comment.spot_id] ||= []).push(comment);
+  }
+  state.ready = true;
+  render();
+  if (activeSpotId) renderDetail(activeSpotId);
+}
+
+async function initializeBackend() {
+  try {
+    const { data: sessionData } = await backend.auth.getSession();
+    if (sessionData.session) {
+      state.user = sessionData.session.user;
+    } else {
+      const { data, error } = await backend.auth.signInAnonymously();
+      if (error) throw error;
+      state.user = data.user;
+    }
+    await loadData();
+  } catch (error) {
+    console.error("Supabase initialization failed", error);
+    document.querySelector(".notice").insertAdjacentHTML(
+      "beforeend",
+      '<span class="backend-warning"> Die Community-Funktionen warten noch auf die einmalige Datenbankeinrichtung.</span>'
+    );
+  }
 }
 
 spots.forEach(addMarker);
@@ -111,6 +370,14 @@ document.querySelectorAll(".filter").forEach(button => {
     document.querySelectorAll(".filter").forEach(item => item.classList.toggle("active", item === button));
     render();
   });
+});
+
+detailDialog.addEventListener("click", event => {
+  if (event.target === detailDialog) closeDetail();
+});
+detailDialog.addEventListener("cancel", event => {
+  event.preventDefault();
+  closeDetail();
 });
 
 document.querySelector("#locate").addEventListener("click", () => {
@@ -126,3 +393,7 @@ document.querySelector("#locate").addEventListener("click", () => {
     { enableHighAccuracy: true, timeout: 10000 }
   );
 });
+
+const initialSpot = location.hash.match(/^#spot\/([a-z0-9-]+)$/)?.[1];
+if (initialSpot && spots.some(spot => spot.id === initialSpot)) openDetail(initialSpot);
+initializeBackend();
