@@ -337,6 +337,9 @@ footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align:
   .guide-hero { min-height: 360px; justify-content: flex-end; }
   .guide-hero h1 { font-size: clamp(3rem, 17vw, 4.8rem); overflow-wrap: anywhere; }
   .filter-groups { grid-template-columns: 1fr; gap: 0; }
+  .filter-groups .filters { flex-wrap: wrap; overflow-x: visible; }
+  .filter-groups .filter { flex: 0 0 auto; min-height: 2.75rem; }
+  .permission-filter { max-width: 100%; }
   .location-toolbar { align-items: start; flex-direction: column; }
   .spot-grid { grid-template-columns: 1fr; }
   #map { min-height: 430px; }
