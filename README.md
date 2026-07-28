@@ -1,6 +1,6 @@
-# Scandinavian Field Manual · Wild Spots
+# Roof Tent Field Manual
 
-Eine mobile Karte für ruhige Naturorte rund um Tröndel – mit Landschaftsfiltern,
+Eine mobile Karte für ruhige Naturorte rund um den gewählten Standort – mit Landschaftsfiltern,
 Pkw-Zufahrt, Navigation und bewusst strenger rechtlicher Ampel. Jeder Spot hat
 eine Detailansicht, eine persönliche 5-Sterne-Bewertung sowie Kommentare mit
 Zeitstempel und Foto-Uploads.
