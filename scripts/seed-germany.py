@@ -15,7 +15,6 @@ OVERPASS = (
     "https://overpass-api.de/api/interpreter",
     "https://overpass.private.coffee/api/interpreter",
 )
-STATE_FILE = pathlib.Path("/tmp/scandinavian-field-manual-seed.json")
 IMPORT_KEY_FILE = pathlib.Path("/tmp/spot-import-key")
 
 
@@ -111,13 +110,17 @@ def research(lat, lng):
     raise RuntimeError("No research provider available")
 
 
-def grid():
+def grid(region):
+    if region == "europe":
+        south, north, west, east = 34.4, 71.2, -11.0, 47.5
+    else:
+        south, north, west, east = 47.4, 55.1, 5.9, 15.1
     points = []
-    lat = 47.4
-    while lat <= 55.1:
+    lat = south
+    while lat <= north:
         step_lng = 0.9 / max(0.65, math.cos(math.radians(lat)))
-        lng = 5.9
-        while lng <= 15.1:
+        lng = west
+        while lng <= east:
             points.append((round(lat, 3), round(lng, 3)))
             lng += step_lng
         lat += 0.72
@@ -127,11 +130,13 @@ def grid():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch", type=int, default=4)
+    parser.add_argument("--region", choices=("germany", "europe"), default="germany")
     parser.add_argument("--lat", type=float)
     parser.add_argument("--lng", type=float)
     args = parser.parse_args()
-    state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {"next": 0, "imported": 0}
-    points = grid()
+    state_file = pathlib.Path(f"/tmp/scandinavian-field-manual-seed-{args.region}.json")
+    state = json.loads(state_file.read_text()) if state_file.exists() else {"next": 0, "imported": 0}
+    points = grid(args.region)
     key = public_key()
     token = authenticate(key)
     import_key = IMPORT_KEY_FILE.read_text().strip()
@@ -158,7 +163,7 @@ def main():
             break
         state["next"] += 1
         completed += 1
-        STATE_FILE.write_text(json.dumps(state))
+        state_file.write_text(json.dumps(state))
         time.sleep(2)
 
     print(json.dumps({

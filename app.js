@@ -111,8 +111,20 @@ function distanceKm(a, b) {
   return earthRadius * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
-function searchCacheKey(center) {
-  return `db-spots:v2:${center.lat.toFixed(2)}:${center.lng.toFixed(2)}:${searchRadius}`;
+function visibleSearchArea(center) {
+  const mapBounds = map.getBounds();
+  const latDelta = searchRadius / 111000;
+  const lngDelta = searchRadius / (111000 * Math.max(.2, Math.cos(center.lat * Math.PI / 180)));
+  return {
+    south: Math.min(mapBounds.getSouth(), center.lat - latDelta),
+    north: Math.max(mapBounds.getNorth(), center.lat + latDelta),
+    west: Math.min(mapBounds.getWest(), center.lng - lngDelta),
+    east: Math.max(mapBounds.getEast(), center.lng + lngDelta)
+  };
+}
+
+function searchCacheKey(area) {
+  return `db-spots:v3:${area.south.toFixed(2)}:${area.north.toFixed(2)}:${area.west.toFixed(2)}:${area.east.toFixed(2)}`;
 }
 
 async function loadNearbySpots(center) {
@@ -120,7 +132,8 @@ async function loadNearbySpots(center) {
   searchCenter = center;
   const status = document.querySelector("#search-status");
   status.textContent = "Naturorte werden geladen …";
-  const key = searchCacheKey(center);
+  const area = visibleSearchArea(center);
+  const key = searchCacheKey(area);
   let discovered;
   const cached = sessionStorage.getItem(key);
 
@@ -128,20 +141,16 @@ async function loadNearbySpots(center) {
     if (cached) {
       discovered = JSON.parse(cached);
     } else {
-      const latDelta = searchRadius / 111000;
-      const lngDelta = searchRadius / (111000 * Math.max(.2, Math.cos(center.lat * Math.PI / 180)));
       const { data: stored, error: storedError } = await backend
         .from("spots")
         .select("id,name,type,icon,lat,lng,access,status,label,note,source_url,discovered")
-        .gte("lat", center.lat - latDelta)
-        .lte("lat", center.lat + latDelta)
-        .gte("lng", center.lng - lngDelta)
-        .lte("lng", center.lng + lngDelta)
-        .limit(120);
+        .gte("lat", area.south)
+        .lte("lat", area.north)
+        .gte("lng", area.west)
+        .lte("lng", area.east)
+        .limit(1000);
       if (storedError) throw storedError;
-      discovered = (stored || [])
-        .map(spot => ({ ...spot, sourceUrl: spot.source_url }))
-        .filter(spot => distanceKm(center, spot) <= searchRadius / 1000);
+      discovered = (stored || []).map(spot => ({ ...spot, sourceUrl: spot.source_url }));
 
       sessionStorage.setItem(key, JSON.stringify(discovered));
     }
@@ -149,8 +158,11 @@ async function loadNearbySpots(center) {
 
     discovered = discovered
       .sort((a, b) => distanceKm(center, a) - distanceKm(center, b))
-      .slice(0, 100);
-    const curatedNearby = curatedSpots.filter(spot => distanceKm(center, spot) <= searchRadius / 1000);
+      .slice(0, 1000);
+    const curatedNearby = curatedSpots.filter(spot =>
+      spot.lat >= area.south && spot.lat <= area.north
+      && spot.lng >= area.west && spot.lng <= area.east
+    );
     const knownCoordinates = new Set(curatedNearby.map(spot => `${spot.lat.toFixed(3)}:${spot.lng.toFixed(3)}`));
     spots = [
       ...curatedNearby,
@@ -159,11 +171,14 @@ async function loadNearbySpots(center) {
     syncMarkers();
     render();
     status.textContent = spots.length
-      ? `${spots.length} Orte im Umkreis von ${searchRadius / 1000} km`
-      : `Noch keine gespeicherten Orte in diesem Umkreis`;
+      ? `${discovered.length >= 1000 ? "Mindestens " : ""}${spots.length} Orte im sichtbaren Kartenausschnitt`
+      : "Noch keine gespeicherten Orte in diesem Kartenausschnitt";
   } catch (error) {
     console.error("Nearby search failed", error);
-    const curatedNearby = curatedSpots.filter(spot => distanceKm(center, spot) <= searchRadius / 1000);
+    const curatedNearby = curatedSpots.filter(spot =>
+      spot.lat >= area.south && spot.lat <= area.north
+      && spot.lng >= area.west && spot.lng <= area.east
+    );
     spots = curatedNearby;
     syncMarkers();
     render();
