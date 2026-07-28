@@ -32,6 +32,7 @@ button, a { font: inherit; }
   color: white;
   background: rgba(18, 52, 43, .97);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 .brand { display: flex; align-items: center; gap: .55rem; color: white; font-family: Georgia, serif; font-size: 1.05rem; text-decoration: none; }
 .brand span { color: #b9ca9c; font-size: .85rem; }
@@ -302,11 +303,13 @@ footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align:
 }
 
 @media (max-width: 760px) {
-  .topnav { align-items: stretch; flex-direction: column; padding: .7rem 1rem; }
+  .topnav { position: static; align-items: stretch; flex-direction: column; gap: .55rem; padding: .7rem 1rem; }
   .brand { justify-content: center; }
   .topnav-links { display: grid; grid-template-columns: 1fr 1fr; }
-  .topnav-links a { text-align: center; }
+  .topnav-links a { min-height: 2.75rem; display: grid; place-items: center; padding: .55rem .35rem; text-align: center; }
   .hero { align-items: start; flex-direction: column; }
+  .guide-hero { min-height: 360px; justify-content: flex-end; }
+  .guide-hero h1 { font-size: clamp(3rem, 17vw, 4.8rem); overflow-wrap: anywhere; }
   .filter-groups { grid-template-columns: 1fr; gap: 0; }
   .location-toolbar { align-items: start; flex-direction: column; }
   .spot-grid { grid-template-columns: 1fr; }
@@ -317,6 +320,19 @@ footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align:
   .guide-intro, .guide-layout { grid-template-columns: 1fr; }
   .quick-grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; }
   .quick-grid article { flex: 0 0 78vw; scroll-snap-align: start; }
-  .guide-index { position: static; grid-template-columns: repeat(2, 1fr); }
+  .guide-index { position: static; display: flex; gap: .25rem; margin-inline: -1rem; padding: .75rem 1rem; overflow-x: auto; border-right: 0; border-left: 0; border-radius: 0; scrollbar-width: none; }
+  .guide-index::-webkit-scrollbar { display: none; }
+  .guide-index .filter-label { display: none; }
+  .guide-index a { flex: 0 0 auto; min-height: 2.6rem; display: grid; place-items: center; padding: .55rem .75rem; border: 1px solid var(--line); border-radius: 999px; background: var(--card); }
+  .guide-chapter { padding-bottom: 2.5rem; }
+  .step-list li { grid-template-columns: 2.2rem 1fr; padding: .85rem; }
+  .step-list li > span { width: 2.2rem; height: 2.2rem; }
   .permission-cards, .guide-card-grid, .checklist-grid, .community-tips { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 390px) {
+  .brand { font-size: .95rem; }
+  .topnav-links a { font-size: .78rem; }
+  .guide-hero { min-height: 330px; }
+  .quick-grid article { flex-basis: 86vw; }
 }
