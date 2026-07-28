@@ -60,9 +60,16 @@ let searchTimer = null;
 let searchSequence = 0;
 let searchCenter = { lat: 54.325, lng: 10.56 };
 let selectedLocationPin = null;
+let activeSuggestionIndex = -1;
+let searchRenderFrame = 0;
+let communityTimer = 0;
+let communitySequence = 0;
 
 const backend = window.ROOF_TENT_BACKEND.client;
 const state = { ratings: {}, ratingCounts: {}, comments: {}, user: null, ready: false };
+const searchInput = document.querySelector("#spot-search");
+const searchSuggestions = document.querySelector("#search-suggestions");
+const spotList = document.querySelector("#spots");
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -70,10 +77,101 @@ function escapeHtml(value) {
   })[char]);
 }
 
+function safeExternalUrl(value, allowedHosts) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && allowedHosts.some(host =>
+      url.hostname === host || url.hostname.endsWith(`.${host}`)
+    ) ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function normalizeSearch(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase("de")
+    .trim();
+}
+
+function searchScore(spot, query) {
+  if (!query) return 0;
+  const name = normalizeSearch(spot.name);
+  const words = name.split(/\s+/);
+  if (name === query) return 100;
+  if (name.startsWith(query)) return 90;
+  if (words.some(word => word.startsWith(query))) return 80;
+  if (name.includes(query)) return 70;
+
+  const details = normalizeSearch([spot.note, spot.access, spot.label, spot.type].join(" "));
+  if (details.includes(query)) return 45;
+
+  let queryIndex = 0;
+  for (const character of name) {
+    if (character === query[queryIndex]) queryIndex += 1;
+    if (queryIndex === query.length) return 30;
+  }
+  return -1;
+}
+
+function matchingSpots(query = searchQuery) {
+  const normalizedQuery = normalizeSearch(query);
+  return spots
+    .map(spot => ({ spot, score: searchScore(spot, normalizedQuery) }))
+    .filter(result => !normalizedQuery || result.score >= 0)
+    .sort((a, b) => b.score - a.score || a.spot.name.localeCompare(b.spot.name, "de"))
+    .map(result => result.spot);
+}
+
+function closeSuggestions() {
+  activeSuggestionIndex = -1;
+  searchSuggestions.hidden = true;
+  searchSuggestions.innerHTML = "";
+  searchInput.setAttribute("aria-expanded", "false");
+  searchInput.removeAttribute("aria-activedescendant");
+}
+
+function renderSuggestions() {
+  const query = normalizeSearch(searchInput.value);
+  if (query.length < 1) return closeSuggestions();
+  const suggestions = matchingSpots(query).slice(0, 7);
+  if (!suggestions.length) return closeSuggestions();
+
+  activeSuggestionIndex = Math.min(activeSuggestionIndex, suggestions.length - 1);
+  searchSuggestions.innerHTML = suggestions.map((spot, index) => `
+    <button id="search-option-${index}" class="search-suggestion${index === activeSuggestionIndex ? " active" : ""}"
+      type="button" role="option" aria-selected="${index === activeSuggestionIndex}" data-suggestion="${escapeHtml(spot.id)}">
+      <i>${escapeHtml(spot.icon)}</i>
+      <strong>${escapeHtml(spot.name)}</strong>
+      <small>${spot.type === "meer" ? "Meer" : spot.type === "see" ? "See" : "Natur"}</small>
+    </button>`).join("");
+  searchSuggestions.hidden = false;
+  searchInput.setAttribute("aria-expanded", "true");
+  if (activeSuggestionIndex >= 0) {
+    searchInput.setAttribute("aria-activedescendant", `search-option-${activeSuggestionIndex}`);
+  } else {
+    searchInput.removeAttribute("aria-activedescendant");
+  }
+}
+
+function selectSuggestion(spotId) {
+  const spot = spots.find(item => item.id === spotId);
+  if (!spot) return;
+  searchInput.value = spot.name;
+  searchQuery = spot.name;
+  closeSuggestions();
+  render();
+  map.setView([spot.lat, spot.lng], 14);
+  markers.get(spot.id)?.openPopup();
+  document.querySelector("#map").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 function markerIcon(spot) {
   return L.divIcon({
     className: "",
-    html: `<span class="spot-marker" style="background:${colors[spot.status]}">${spot.icon}</span>`,
+    html: `<span class="spot-marker" style="background:${colors[spot.status] || colors.amber}">${escapeHtml(spot.icon)}</span>`,
     iconSize: [32, 32], iconAnchor: [16, 16]
   });
 }
@@ -94,17 +192,18 @@ function popupRating(spotId) {
 
 function popupMarkup(spot) {
   const navigationUrl = `https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}`;
+  const spotId = escapeHtml(spot.id);
   return `
     <div class="map-popup">
       <div class="map-popup-title">
-        <strong>${spot.icon} ${escapeHtml(spot.name)}</strong>
+        <strong>${escapeHtml(spot.icon)} ${escapeHtml(spot.name)}</strong>
         <i class="status-dot ${spot.status}" title="${escapeHtml(spot.label)}"></i>
       </div>
       <small>${escapeHtml(spot.access)}</small>
       ${popupRating(spot.id)}
       <div class="map-popup-actions">
-        <button type="button" data-popup-detail="${spot.id}">Details</button>
-        <button type="button" data-popup-comments="${spot.id}">Kommentare</button>
+        <button type="button" data-popup-detail="${spotId}">Details</button>
+        <button type="button" data-popup-comments="${spotId}">Kommentare</button>
         <a href="${navigationUrl}" target="_blank" rel="noopener">Navigation ↗</a>
       </div>
     </div>`;
@@ -200,6 +299,7 @@ async function loadNearbySpots(center) {
     ];
     syncMarkers();
     render();
+    scheduleCommunityLoad();
     status.textContent = spots.length
       ? `${discovered.length >= 1000 ? "Mindestens " : ""}${spots.length} Orte im sichtbaren Kartenausschnitt`
       : "Noch keine gespeicherten Orte in diesem Kartenausschnitt";
@@ -212,6 +312,7 @@ async function loadNearbySpots(center) {
     spots = curatedNearby;
     syncMarkers();
     render();
+    scheduleCommunityLoad();
     status.textContent = `${spots.length} gespeicherte Orte – Hintergrundrecherche vorübergehend nicht erreichbar`;
   }
 }
@@ -227,68 +328,78 @@ function starRating(spotId, compact = false) {
   const rating = Number(state.ratings[spotId] || 0);
   const count = Number(state.ratingCounts[spotId] || 0);
   const label = rating ? `${rating} von 5 Sternen${count ? ` · ${count} Bewertung${count === 1 ? "" : "en"}` : ""}` : "Noch nicht bewertet";
+  const safeSpotId = escapeHtml(spotId);
   return `
-    <div class="rating${compact ? " compact" : ""}" role="group" aria-label="Bewertung: ${label}" data-rating="${rating}">
+    <div class="rating${compact ? " compact" : ""}" role="group" aria-label="Bewertung: ${escapeHtml(label)}" data-rating="${rating}">
       ${[1, 2, 3, 4, 5].map(value => `
-        <button type="button" class="star${value <= rating ? " selected" : ""}" data-rate="${value}" data-spot="${spotId}"
+        <button type="button" class="star${value <= rating ? " selected" : ""}" data-rate="${value}" data-spot="${safeSpotId}"
           aria-label="${value} Stern${value === 1 ? "" : "e"}" title="${value} Stern${value === 1 ? "" : "e"}">★</button>
       `).join("")}
-      <span class="rating-label">${label}</span>
+      <span class="rating-label">${escapeHtml(label)}</span>
     </div>`;
 }
 
 function card(spot) {
   const commentCount = (state.comments[spot.id] || []).length;
+  const spotId = escapeHtml(spot.id);
   return `
     <article class="spot">
       <div class="spot-top">
-        <h3>${spot.icon} ${spot.name}</h3>
-        <span class="status-dot ${spot.status}" title="${spot.label}" aria-label="${spot.label}"></span>
+        <h3>${escapeHtml(spot.icon)} ${escapeHtml(spot.name)}</h3>
+        <span class="status-dot ${spot.status}" title="${escapeHtml(spot.label)}" aria-label="${escapeHtml(spot.label)}"></span>
       </div>
       ${starRating(spot.id, true)}
-      <div class="meta">${spot.access}</div>
-      <p>${spot.note}</p>
+      <div class="meta">${escapeHtml(spot.access)}</div>
+      <p>${escapeHtml(spot.note)}</p>
       <div class="actions">
-        <button class="open-detail" data-id="${spot.id}">Details & Kommentare${commentCount ? ` (${commentCount})` : ""}</button>
-        <button class="show-map" data-id="${spot.id}">Auf Karte</button>
+        <button class="open-detail" data-id="${spotId}">Details & Kommentare${commentCount ? ` (${commentCount})` : ""}</button>
+        <button class="show-map" data-id="${spotId}">Auf Karte</button>
       </div>
     </article>`;
 }
 
 function render() {
-  const normalizedQuery = searchQuery.trim().toLocaleLowerCase("de");
+  const normalizedQuery = normalizeSearch(searchQuery);
+  const matchedIds = normalizedQuery ? new Set(matchingSpots().map(spot => spot.id)) : null;
   const visible = spots.filter(spot =>
     (activeFilter === "all" || spot.type === activeFilter)
     && (activePermissionFilter === "all" || spot.status === activePermissionFilter)
-    && (!normalizedQuery || [spot.name, spot.access, spot.note, spot.label]
-      .some(value => String(value || "").toLocaleLowerCase("de").includes(normalizedQuery)))
+    && (!matchedIds || matchedIds.has(spot.id))
   );
-  document.querySelector("#spots").innerHTML = visible.length
+  spotList.innerHTML = visible.length
     ? visible.map(card).join("")
     : '<div class="empty-state"><strong>Keine passenden Orte</strong><span>Ändere die Suche, den Kartenausschnitt oder einen Filter.</span></div>';
   document.querySelector("#count").textContent = `${visible.length} Orte`;
 
+  const visibleIds = new Set(visible.map(spot => spot.id));
   spots.forEach(spot => {
     const marker = markers.get(spot.id);
     marker?.setPopupContent(popupMarkup(spot));
-    const shouldShow = visible.includes(spot);
+    const shouldShow = visibleIds.has(spot.id);
     if (shouldShow && !map.hasLayer(marker)) marker.addTo(map);
     if (!shouldShow && map.hasLayer(marker)) marker.removeFrom(map);
   });
 
-  bindRatingButtons(document.querySelector("#spots"));
-  document.querySelectorAll(".show-map").forEach(button => {
-    button.addEventListener("click", () => {
-      const spot = spots.find(item => item.id === button.dataset.id);
-      map.setView([spot.lat, spot.lng], 14);
-      markers.get(spot.id).openPopup();
-      document.querySelector("#map").scrollIntoView({ behavior: "smooth", block: "center" });
-    });
-  });
-  document.querySelectorAll(".open-detail").forEach(button => {
-    button.addEventListener("click", () => openDetail(button.dataset.id));
-  });
 }
+
+spotList.addEventListener("click", event => {
+  const ratingButton = event.target.closest("[data-rate]");
+  if (ratingButton) {
+    saveRating(ratingButton.dataset.spot, Number(ratingButton.dataset.rate));
+    return;
+  }
+  const mapButton = event.target.closest(".show-map");
+  if (mapButton) {
+    const spot = spots.find(item => item.id === mapButton.dataset.id);
+    if (!spot) return;
+    map.setView([spot.lat, spot.lng], 14);
+    markers.get(spot.id)?.openPopup();
+    document.querySelector("#map").scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  const detailButton = event.target.closest(".open-detail");
+  if (detailButton) openDetail(detailButton.dataset.id);
+});
 
 function bindRatingButtons(container) {
   container.querySelectorAll("[data-rate]").forEach(button => {
@@ -317,13 +428,15 @@ async function saveRating(spotId, value) {
 }
 
 function commentMarkup(comment) {
+  const createdAt = new Date(comment.created_at);
   return `
     <article class="comment">
-      <time datetime="${comment.created_at}">${dateFormatter.format(new Date(comment.created_at))}</time>
+      <time datetime="${escapeHtml(comment.created_at)}">${Number.isNaN(createdAt.valueOf()) ? "" : dateFormatter.format(createdAt)}</time>
       <p>${escapeHtml(comment.body).replace(/\n/g, "<br>")}</p>
       ${comment.photos?.length ? `
         <div class="photo-grid">
-          ${comment.photos.map(photo => `<a href="${photo.url}" target="_blank"><img src="${photo.url}" alt="Foto zum Kommentar" loading="lazy"></a>`).join("")}
+          ${comment.photos.map(photo => safeExternalUrl(photo.url, ["supabase.co"])).filter(Boolean)
+            .map(url => `<a href="${escapeHtml(url)}" target="_blank" rel="noopener"><img src="${escapeHtml(url)}" alt="Foto zum Kommentar" loading="lazy"></a>`).join("")}
         </div>` : ""}
     </article>`;
 }
@@ -333,22 +446,23 @@ function renderDetail(spotId) {
   if (!spot) return;
   const comments = state.comments[spot.id] || [];
   const destination = `${spot.lat},${spot.lng}`;
+  const sourceUrl = safeExternalUrl(spot.sourceUrl, ["openstreetmap.org"]);
   detailContent.innerHTML = `
     <div class="detail-head">
       <button type="button" class="close-detail" aria-label="Detailansicht schließen">×</button>
-      <p class="eyebrow">${spot.type} · ${spot.lat.toFixed(4)}, ${spot.lng.toFixed(4)}</p>
-      <h2>${spot.icon} ${spot.name}</h2>
-      <div class="detail-status"><span class="status-dot ${spot.status}"></span>${spot.label}</div>
+      <p class="eyebrow">${escapeHtml(spot.type)} · ${spot.lat.toFixed(4)}, ${spot.lng.toFixed(4)}</p>
+      <h2>${escapeHtml(spot.icon)} ${escapeHtml(spot.name)}</h2>
+      <div class="detail-status"><span class="status-dot ${spot.status}"></span>${escapeHtml(spot.label)}</div>
     </div>
     <div class="detail-body">
       ${starRating(spot.id)}
-      <p class="detail-note">${spot.note}</p>
+      <p class="detail-note">${escapeHtml(spot.note)}</p>
       <dl class="facts">
-        <div><dt>Zufahrt</dt><dd>${spot.access}</dd></div>
-        <div><dt>Übernachtung</dt><dd>${spot.label}</dd></div>
+        <div><dt>Zufahrt</dt><dd>${escapeHtml(spot.access)}</dd></div>
+        <div><dt>Übernachtung</dt><dd>${escapeHtml(spot.label)}</dd></div>
       </dl>
       <a class="navigation-button" href="https://www.google.com/maps/dir/?api=1&destination=${destination}" target="_blank" rel="noopener">Navigation starten ↗</a>
-      ${spot.sourceUrl ? `<a class="source-link" href="${spot.sourceUrl}" target="_blank" rel="noopener">Quelle: OpenStreetMap ↗</a>` : ""}
+      ${sourceUrl ? `<a class="source-link" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener">Quelle: OpenStreetMap ↗</a>` : ""}
 
       <section class="comments-section">
         <div class="comments-title">
@@ -398,12 +512,20 @@ function previewFiles(files) {
 
 function resizeImage(file) {
   return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/") || file.size > 12 * 1024 * 1024) {
+      reject(new Error("Unsupported image upload"));
+      return;
+    }
     const reader = new FileReader();
     reader.onerror = reject;
     reader.onload = () => {
       const image = new Image();
       image.onerror = reject;
       image.onload = () => {
+        if (image.width * image.height > 60_000_000) {
+          reject(new Error("Image dimensions are too large"));
+          return;
+        }
         const max = 1400;
         const scale = Math.min(1, max / Math.max(image.width, image.height));
         const canvas = document.createElement("canvas");
@@ -465,11 +587,33 @@ async function saveComment(event) {
 }
 
 async function loadData() {
-  const [{ data: ratings, error: ratingsError }, { data: comments, error: commentsError }] = await Promise.all([
-    backend.from("ratings").select("spot_id,user_id,value"),
-    backend.from("comments").select("id,spot_id,body,created_at,comment_photos(storage_path)").order("created_at", { ascending: true })
+  if (!state.user) return;
+  const sequence = ++communitySequence;
+  const spotIds = [...new Set(spots.map(spot => spot.id))];
+  const chunks = [];
+  for (let index = 0; index < spotIds.length; index += 150) {
+    chunks.push(spotIds.slice(index, index + 150));
+  }
+  if (!chunks.length) return;
+
+  const [ratingResponses, commentResponses] = await Promise.all([
+    Promise.all(chunks.map(ids => backend
+      .from("ratings")
+      .select("spot_id,user_id,value")
+      .in("spot_id", ids)
+      .limit(5000))),
+    Promise.all(chunks.map(ids => backend
+      .from("comments")
+      .select("id,spot_id,body,created_at,comment_photos(storage_path)")
+      .in("spot_id", ids)
+      .order("created_at", { ascending: true })
+      .limit(2000)))
   ]);
-  if (ratingsError || commentsError) throw ratingsError || commentsError;
+  const failed = [...ratingResponses, ...commentResponses].find(response => response.error);
+  if (failed) throw failed.error;
+  if (sequence !== communitySequence) return;
+  const ratings = ratingResponses.flatMap(response => response.data || []);
+  const comments = commentResponses.flatMap(response => response.data || []);
 
   state.ratings = {};
   state.ratingCounts = {};
@@ -493,6 +637,14 @@ async function loadData() {
   state.ready = true;
   render();
   if (activeSpotId) renderDetail(activeSpotId);
+}
+
+function scheduleCommunityLoad() {
+  if (!state.user) return;
+  clearTimeout(communityTimer);
+  communityTimer = setTimeout(() => {
+    loadData().catch(error => console.error("Community data refresh failed", error));
+  }, 250);
 }
 
 async function initializeBackend() {
@@ -550,10 +702,41 @@ document.querySelector("#search-radius").addEventListener("change", event => {
   loadNearbySpots({ lat: map.getCenter().lat, lng: map.getCenter().lng });
 });
 
-document.querySelector("#spot-search").addEventListener("input", event => {
+searchInput.addEventListener("input", event => {
   searchQuery = event.target.value;
-  render();
+  cancelAnimationFrame(searchRenderFrame);
+  searchRenderFrame = requestAnimationFrame(() => {
+    render();
+    renderSuggestions();
+  });
 });
+
+searchInput.addEventListener("keydown", event => {
+  const options = [...searchSuggestions.querySelectorAll("[data-suggestion]")];
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    if (searchSuggestions.hidden) renderSuggestions();
+    const direction = event.key === "ArrowDown" ? 1 : -1;
+    activeSuggestionIndex = Math.max(0, Math.min(options.length - 1, activeSuggestionIndex + direction));
+    renderSuggestions();
+  } else if (event.key === "Enter" && activeSuggestionIndex >= 0) {
+    event.preventDefault();
+    options[activeSuggestionIndex]?.click();
+  } else if (event.key === "Escape") {
+    closeSuggestions();
+  }
+});
+
+searchSuggestions.addEventListener("mousedown", event => {
+  const option = event.target.closest("[data-suggestion]");
+  if (option) {
+    event.preventDefault();
+    selectSuggestion(option.dataset.suggestion);
+  }
+});
+
+searchInput.addEventListener("blur", () => setTimeout(closeSuggestions, 120));
+searchInput.addEventListener("focus", renderSuggestions);
 
 document.querySelectorAll(".type-filter").forEach(button => {
   button.addEventListener("click", () => {

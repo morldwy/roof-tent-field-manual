@@ -13,6 +13,28 @@ Alle wichtigen Änderungen dieses Projekts werden hier dokumentiert.
 - Überschriften verwenden die frei lizenzierte, selbst gehostete Source Serif 4
   Display als rechtssichere Annäherung an Corporate A.
 
+### Added
+
+- schnelle, fehlertolerante Spot-Vervollständigung mit Maus- und
+  Tastaturbedienung
+
+### Security
+
+- Datenbank- und OpenStreetMap-Inhalte werden vor der HTML-Ausgabe maskiert
+- externe Foto- und Quellen-URLs werden auf erlaubte HTTPS-Domains begrenzt
+- Content Security Policy und restriktive Referrer-Policy ergänzt
+- Foto-Uploads werden vor der Verarbeitung nach Typ, Dateigröße und
+  Bildabmessungen begrenzt
+
+### Performance
+
+- Markerfilter verwenden Mengenabgleiche statt quadratischer Listensuchen
+- Suchaktualisierungen werden pro Animationsframe gebündelt
+- Kartenaktionen verwenden delegierte Ereignisse statt neuer Listener nach
+  jedem Rendern
+- Community-Daten werden nur noch in begrenzten Batches für geladene Spots
+  abgefragt
+
 ## [0.1.0] - 2026-07-28
 
 ### Added

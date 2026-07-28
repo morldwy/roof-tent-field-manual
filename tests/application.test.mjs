@@ -29,11 +29,39 @@ test("map, filters, search and guide UGC remain present", async () => {
   const [index, guide] = await Promise.all([read("index.html"), read("guide.html")]);
   assert.match(index, /id="map"/);
   assert.match(index, /id="spot-search"/);
+  assert.match(index, /aria-autocomplete="list"/);
+  assert.match(index, /id="search-suggestions"/);
   assert.match(index, /data-filter="meer"/);
   assert.match(index, /data-permission="amber"/);
   assert.match(index, /verantwortungsvollen Übernachten in deinem Dachzelt/);
   assert.match(guide, /id="tip-form"/);
   assert.match(guide, /data-check="roof-locks"/);
+});
+
+test("spot search provides ranked keyboard-accessible autocomplete", async () => {
+  const app = await read("app.js");
+  assert.match(app, /function searchScore/);
+  assert.match(app, /function renderSuggestions/);
+  assert.match(app, /ArrowDown/);
+  assert.match(app, /aria-activedescendant/);
+  assert.match(app, /selectSuggestion/);
+  assert.match(app, /requestAnimationFrame/);
+});
+
+test("dynamic community and OSM content is escaped and external URLs are constrained", async () => {
+  const [app, index, guide] = await Promise.all([read("app.js"), read("index.html"), read("guide.html")]);
+  assert.match(app, /function safeExternalUrl/);
+  assert.match(app, /escapeHtml\(spot\.name\)/);
+  assert.match(app, /allowedHosts/);
+  assert.match(app, /60_000_000/);
+  assert.doesNotMatch(app, /visible\.includes\(spot\)/);
+  assert.match(app, /\.in\("spot_id", ids\)/);
+  assert.match(app, /index \+= 150/);
+  for (const html of [index, guide]) {
+    assert.match(html, /Content-Security-Policy/);
+    assert.match(html, /object-src 'none'/);
+    assert.match(html, /strict-origin-when-cross-origin/);
+  }
 });
 
 test("OSM beaches distinguish coast from inland water", async () => {

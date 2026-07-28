@@ -4,10 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#183d34">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
   <title>Wild Spots · Roof Tent Manual</title>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=20260729-2">
+  <link rel="stylesheet" href="styles.css?v=20260729-3">
 </head>
 <body>
   <nav class="topnav" aria-label="Hauptnavigation">
@@ -36,7 +38,11 @@
 
     <label class="spot-search" for="spot-search">
       <span>Orte durchsuchen</span>
-      <input id="spot-search" type="search" autocomplete="off" placeholder="Name, Landschaft oder Zufahrt …">
+      <div class="search-control">
+        <input id="spot-search" type="search" autocomplete="off" placeholder="Name, Landschaft oder Zufahrt …"
+          role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search-suggestions">
+        <div id="search-suggestions" class="search-suggestions" role="listbox" aria-label="Ortsvorschläge" hidden></div>
+      </div>
     </label>
 
     <section class="filter-groups" aria-label="Kartenfilter">
@@ -109,6 +115,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="backend.js?v=20260728-1"></script>
-  <script src="app.js?v=20260729-1"></script>
+  <script src="app.js?v=20260729-2"></script>
 </body>
 </html>
