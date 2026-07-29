@@ -66,6 +66,7 @@ let placeSearchTimer = 0;
 let placeSearchController = null;
 let placeSuggestionQuery = "";
 let placeSuggestions = [];
+let visibleSpotLimit = 10;
 let communityTimer = 0;
 let communitySequence = 0;
 
@@ -74,6 +75,7 @@ const state = { ratings: {}, ratingCounts: {}, comments: {}, user: null, ready: 
 const searchInput = document.querySelector("#spot-search");
 const searchSuggestions = document.querySelector("#search-suggestions");
 const spotList = document.querySelector("#spots");
+const loadMoreSpotsButton = document.querySelector("#load-more-spots");
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -411,7 +413,8 @@ async function loadNearbySpots(center) {
     spots = [
       ...curatedNearby,
       ...discovered.filter(spot => !knownCoordinates.has(`${spot.lat.toFixed(3)}:${spot.lng.toFixed(3)}`))
-    ];
+    ].sort((a, b) => distanceKm(center, a) - distanceKm(center, b));
+    visibleSpotLimit = 10;
     syncMarkers();
     render();
     scheduleCommunityLoad();
@@ -424,7 +427,8 @@ async function loadNearbySpots(center) {
       spot.lat >= area.south && spot.lat <= area.north
       && spot.lng >= area.west && spot.lng <= area.east
     );
-    spots = curatedNearby;
+    spots = curatedNearby.sort((a, b) => distanceKm(center, a) - distanceKm(center, b));
+    visibleSpotLimit = 10;
     syncMarkers();
     render();
     scheduleCommunityLoad();
@@ -481,13 +485,13 @@ function render() {
     && (activePermissionFilter === "all" || spot.status === activePermissionFilter)
     && (!matchedIds || matchedIds.has(spot.id))
   );
-  const listed = visible.slice(0, 200);
+  const listed = visible.slice(0, visibleSpotLimit);
   spotList.innerHTML = listed.length
     ? listed.map(card).join("")
     : '<div class="empty-state"><strong>Keine passenden Orte</strong><span>Ändere die Suche, den Kartenausschnitt oder einen Filter.</span></div>';
-  document.querySelector("#count").textContent = visible.length > listed.length
-    ? `${visible.length} Orte · erste ${listed.length} als Liste`
-    : `${visible.length} Orte`;
+  document.querySelector("#count").textContent = `${visible.length} Orte`;
+  loadMoreSpotsButton.hidden = listed.length >= visible.length;
+  loadMoreSpotsButton.textContent = `Weitere ${Math.min(10, visible.length - listed.length)} Spots anzeigen`;
 
   const visibleIds = new Set(visible.map(spot => spot.id));
   spots.forEach(spot => {
@@ -499,6 +503,11 @@ function render() {
   });
 
 }
+
+loadMoreSpotsButton.addEventListener("click", () => {
+  visibleSpotLimit += 10;
+  render();
+});
 
 spotList.addEventListener("click", event => {
   const ratingButton = event.target.closest("[data-rate]");
@@ -825,6 +834,7 @@ document.querySelector("#search-radius").addEventListener("change", event => {
 
 searchInput.addEventListener("input", event => {
   searchQuery = event.target.value;
+  visibleSpotLimit = 10;
   placeSuggestions = [];
   placeSuggestionQuery = "";
   clearTimeout(placeSearchTimer);
@@ -875,6 +885,7 @@ searchInput.addEventListener("focus", renderSuggestions);
 document.querySelectorAll(".type-filter").forEach(button => {
   button.addEventListener("click", () => {
     activeFilter = button.dataset.filter;
+    visibleSpotLimit = 10;
     document.querySelectorAll(".type-filter").forEach(item => item.classList.toggle("active", item === button));
     render();
   });
@@ -883,6 +894,7 @@ document.querySelectorAll(".type-filter").forEach(button => {
 document.querySelectorAll(".permission-filter").forEach(button => {
   button.addEventListener("click", () => {
     activePermissionFilter = button.dataset.permission;
+    visibleSpotLimit = 10;
     document.querySelectorAll(".permission-filter").forEach(item => item.classList.toggle("active", item === button));
     render();
   });
