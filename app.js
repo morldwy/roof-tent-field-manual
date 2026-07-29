@@ -55,7 +55,7 @@ let activeFilter = "all";
 let activePermissionFilter = "all";
 let searchQuery = "";
 let activeSpotId = null;
-let searchRadius = Number(document.querySelector("#search-radius").value);
+let searchRadius = document.querySelector("#search-radius").value;
 let searchTimer = null;
 let searchSequence = 0;
 let searchCenter = { lat: 54.325, lng: 10.56 };
@@ -241,9 +241,13 @@ function distanceKm(a, b) {
 }
 
 function visibleSearchArea(center) {
+  if (searchRadius === "europe") {
+    return { south: 34, north: 72, west: -25, east: 50 };
+  }
   const mapBounds = map.getBounds();
-  const latDelta = searchRadius / 111000;
-  const lngDelta = searchRadius / (111000 * Math.max(.2, Math.cos(center.lat * Math.PI / 180)));
+  const radius = Number(searchRadius);
+  const latDelta = radius / 111000;
+  const lngDelta = radius / (111000 * Math.max(.2, Math.cos(center.lat * Math.PI / 180)));
   return {
     south: Math.min(mapBounds.getSouth(), center.lat - latDelta),
     north: Math.max(mapBounds.getNorth(), center.lat + latDelta),
@@ -253,7 +257,29 @@ function visibleSearchArea(center) {
 }
 
 function searchCacheKey(area) {
-  return `db-spots:v4:${area.south.toFixed(2)}:${area.north.toFixed(2)}:${area.west.toFixed(2)}:${area.east.toFixed(2)}`;
+  return `db-spots:v5:${area.south.toFixed(2)}:${area.north.toFixed(2)}:${area.west.toFixed(2)}:${area.east.toFixed(2)}`;
+}
+
+async function fetchStoredSpots(area) {
+  const pageSize = 1000;
+  const maxResults = searchRadius === "europe" ? 5000 : 1000;
+  const stored = [];
+
+  for (let from = 0; from < maxResults; from += pageSize) {
+    const { data, error } = await backend
+      .from("spots")
+      .select("id,name,type,icon,lat,lng,access,status,label,note,source_url,discovered")
+      .gte("lat", area.south)
+      .lte("lat", area.north)
+      .gte("lng", area.west)
+      .lte("lng", area.east)
+      .order("id", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    stored.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+  return stored;
 }
 
 async function loadNearbySpots(center) {
@@ -270,24 +296,18 @@ async function loadNearbySpots(center) {
     if (cached) {
       discovered = JSON.parse(cached);
     } else {
-      const { data: stored, error: storedError } = await backend
-        .from("spots")
-        .select("id,name,type,icon,lat,lng,access,status,label,note,source_url,discovered")
-        .gte("lat", area.south)
-        .lte("lat", area.north)
-        .gte("lng", area.west)
-        .lte("lng", area.east)
-        .limit(1000);
-      if (storedError) throw storedError;
-      discovered = (stored || []).map(spot => ({ ...spot, sourceUrl: spot.source_url }));
+      const stored = await fetchStoredSpots(area);
+      discovered = stored.map(spot => ({ ...spot, sourceUrl: spot.source_url }));
 
-      sessionStorage.setItem(key, JSON.stringify(discovered));
+      if (searchRadius !== "europe") {
+        sessionStorage.setItem(key, JSON.stringify(discovered));
+      }
     }
     if (sequence !== searchSequence) return;
 
     discovered = discovered
       .sort((a, b) => distanceKm(center, a) - distanceKm(center, b))
-      .slice(0, 1000);
+      .slice(0, searchRadius === "europe" ? 5000 : 1000);
     const curatedNearby = curatedSpots.filter(spot =>
       spot.lat >= area.south && spot.lat <= area.north
       && spot.lng >= area.west && spot.lng <= area.east
@@ -301,7 +321,7 @@ async function loadNearbySpots(center) {
     render();
     scheduleCommunityLoad();
     status.textContent = spots.length
-      ? `${discovered.length >= 1000 ? "Mindestens " : ""}${spots.length} Orte im sichtbaren Kartenausschnitt`
+      ? `${discovered.length >= (searchRadius === "europe" ? 5000 : 1000) ? "Mindestens " : ""}${spots.length} Orte ${searchRadius === "europe" ? "in Europa" : "im sichtbaren Kartenausschnitt"}`
       : "Noch keine gespeicherten Orte in diesem Kartenausschnitt";
   } catch (error) {
     console.error("Nearby search failed", error);
@@ -366,10 +386,13 @@ function render() {
     && (activePermissionFilter === "all" || spot.status === activePermissionFilter)
     && (!matchedIds || matchedIds.has(spot.id))
   );
-  spotList.innerHTML = visible.length
-    ? visible.map(card).join("")
+  const listed = visible.slice(0, 200);
+  spotList.innerHTML = listed.length
+    ? listed.map(card).join("")
     : '<div class="empty-state"><strong>Keine passenden Orte</strong><span>Ändere die Suche, den Kartenausschnitt oder einen Filter.</span></div>';
-  document.querySelector("#count").textContent = `${visible.length} Orte`;
+  document.querySelector("#count").textContent = visible.length > listed.length
+    ? `${visible.length} Orte · erste ${listed.length} als Liste`
+    : `${visible.length} Orte`;
 
   const visibleIds = new Set(visible.map(spot => spot.id));
   spots.forEach(spot => {
@@ -698,7 +721,10 @@ map.on("click", event => {
   loadNearbySpots({ lat: event.latlng.lat, lng: event.latlng.lng });
 });
 document.querySelector("#search-radius").addEventListener("change", event => {
-  searchRadius = Number(event.target.value);
+  searchRadius = event.target.value;
+  if (searchRadius === "europe") {
+    map.fitBounds([[34, -25], [72, 50]], { padding: [12, 12] });
+  }
   loadNearbySpots({ lat: map.getCenter().lat, lng: map.getCenter().lng });
 });
 
