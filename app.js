@@ -62,6 +62,10 @@ let searchCenter = { lat: 54.325, lng: 10.56 };
 let selectedLocationPin = null;
 let activeSuggestionIndex = -1;
 let searchRenderFrame = 0;
+let placeSearchTimer = 0;
+let placeSearchController = null;
+let placeSuggestionQuery = "";
+let placeSuggestions = [];
 let communityTimer = 0;
 let communitySequence = 0;
 
@@ -136,17 +140,30 @@ function closeSuggestions() {
 function renderSuggestions() {
   const query = normalizeSearch(searchInput.value);
   if (query.length < 1) return closeSuggestions();
-  const suggestions = matchingSpots(query).slice(0, 7);
-  if (!suggestions.length) return closeSuggestions();
+  const spotSuggestions = matchingSpots(query).slice(0, 4);
+  const remoteSuggestions = placeSuggestionQuery === query ? placeSuggestions.slice(0, 5) : [];
+  const suggestionCount = spotSuggestions.length + remoteSuggestions.length;
+  if (!suggestionCount) return closeSuggestions();
 
-  activeSuggestionIndex = Math.min(activeSuggestionIndex, suggestions.length - 1);
-  searchSuggestions.innerHTML = suggestions.map((spot, index) => `
+  activeSuggestionIndex = Math.min(activeSuggestionIndex, suggestionCount - 1);
+  searchSuggestions.innerHTML = spotSuggestions.map((spot, index) => `
     <button id="search-option-${index}" class="search-suggestion${index === activeSuggestionIndex ? " active" : ""}"
       type="button" role="option" aria-selected="${index === activeSuggestionIndex}" data-suggestion="${escapeHtml(spot.id)}">
       <i>${escapeHtml(spot.icon)}</i>
       <strong>${escapeHtml(spot.name)}</strong>
-      <small>${spot.type === "meer" ? "Meer" : spot.type === "see" ? "See" : "Natur"}</small>
+      <small>Gespeicherter Spot · ${spot.type === "meer" ? "Meer" : spot.type === "see" ? "See" : "Natur"}</small>
     </button>`).join("");
+  searchSuggestions.insertAdjacentHTML("beforeend", remoteSuggestions.map((place, offset) => {
+    const index = spotSuggestions.length + offset;
+    return `
+      <button id="search-option-${index}" class="search-suggestion${index === activeSuggestionIndex ? " active" : ""}"
+        type="button" role="option" aria-selected="${index === activeSuggestionIndex}"
+        data-place-lat="${place.lat}" data-place-lng="${place.lng}" data-place-name="${escapeHtml(place.name)}">
+        <i>⌖</i>
+        <strong>${escapeHtml(place.name)}</strong>
+        <small>${escapeHtml(place.context)}</small>
+      </button>`;
+  }).join(""));
   searchSuggestions.hidden = false;
   searchInput.setAttribute("aria-expanded", "true");
   if (activeSuggestionIndex >= 0) {
@@ -154,6 +171,84 @@ function renderSuggestions() {
   } else {
     searchInput.removeAttribute("aria-activedescendant");
   }
+}
+
+function placeContext(properties) {
+  return [...new Set([
+    properties.city,
+    properties.county,
+    properties.state,
+    properties.country
+  ].filter(Boolean))].join(" · ") || "Ort in Europa";
+}
+
+async function loadPlaceSuggestions(query) {
+  const normalizedQuery = normalizeSearch(query);
+  if (normalizedQuery.length < 2) {
+    placeSuggestions = [];
+    placeSuggestionQuery = "";
+    renderSuggestions();
+    return;
+  }
+
+  placeSearchController?.abort();
+  placeSearchController = new AbortController();
+  const params = new URLSearchParams({
+    q: query.trim(),
+    limit: "5",
+    lang: "de",
+    bbox: "-25,34,50,72"
+  });
+
+  try {
+    const response = await fetch(`https://photon.komoot.io/api/?${params}`, {
+      signal: placeSearchController.signal,
+      referrerPolicy: "strict-origin-when-cross-origin"
+    });
+    if (!response.ok) throw new Error(`Place search returned ${response.status}`);
+    const result = await response.json();
+    if (normalizeSearch(searchInput.value) !== normalizedQuery) return;
+    placeSuggestionQuery = normalizedQuery;
+    placeSuggestions = (result.features || []).flatMap(feature => {
+      const [lng, lat] = feature.geometry?.coordinates || [];
+      const properties = feature.properties || {};
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || !properties.name) return [];
+      return [{
+        name: String(properties.name),
+        context: placeContext(properties),
+        lat,
+        lng
+      }];
+    });
+    renderSuggestions();
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    console.warn("Place autocomplete unavailable", error);
+    placeSuggestions = [];
+    placeSuggestionQuery = normalizedQuery;
+    renderSuggestions();
+  }
+}
+
+function selectPlace(name, lat, lng) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  searchInput.value = name;
+  searchQuery = "";
+  closeSuggestions();
+  if (selectedLocationPin) {
+    selectedLocationPin.setLatLng([lat, lng]);
+  } else {
+    selectedLocationPin = L.circleMarker([lat, lng], {
+      radius: 7,
+      color: "#fff",
+      weight: 3,
+      fillColor: "#17372f",
+      fillOpacity: 1
+    }).bindTooltip(name).addTo(map);
+  }
+  map.setView([lat, lng], 10);
+  loadNearbySpots({ lat, lng });
+  document.querySelector("#map").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 function selectSuggestion(spotId) {
@@ -730,6 +825,10 @@ document.querySelector("#search-radius").addEventListener("change", event => {
 
 searchInput.addEventListener("input", event => {
   searchQuery = event.target.value;
+  placeSuggestions = [];
+  placeSuggestionQuery = "";
+  clearTimeout(placeSearchTimer);
+  placeSearchTimer = setTimeout(() => loadPlaceSuggestions(event.target.value), 320);
   cancelAnimationFrame(searchRenderFrame);
   searchRenderFrame = requestAnimationFrame(() => {
     render();
@@ -738,15 +837,16 @@ searchInput.addEventListener("input", event => {
 });
 
 searchInput.addEventListener("keydown", event => {
-  const options = [...searchSuggestions.querySelectorAll("[data-suggestion]")];
   if (event.key === "ArrowDown" || event.key === "ArrowUp") {
     event.preventDefault();
     if (searchSuggestions.hidden) renderSuggestions();
+    const options = [...searchSuggestions.querySelectorAll("[data-suggestion], [data-place-lat]")];
     const direction = event.key === "ArrowDown" ? 1 : -1;
     activeSuggestionIndex = Math.max(0, Math.min(options.length - 1, activeSuggestionIndex + direction));
     renderSuggestions();
   } else if (event.key === "Enter" && activeSuggestionIndex >= 0) {
     event.preventDefault();
+    const options = [...searchSuggestions.querySelectorAll("[data-suggestion], [data-place-lat]")];
     options[activeSuggestionIndex]?.click();
   } else if (event.key === "Escape") {
     closeSuggestions();
@@ -754,10 +854,18 @@ searchInput.addEventListener("keydown", event => {
 });
 
 searchSuggestions.addEventListener("mousedown", event => {
-  const option = event.target.closest("[data-suggestion]");
-  if (option) {
+  const spotOption = event.target.closest("[data-suggestion]");
+  const placeOption = event.target.closest("[data-place-lat]");
+  if (spotOption) {
     event.preventDefault();
-    selectSuggestion(option.dataset.suggestion);
+    selectSuggestion(spotOption.dataset.suggestion);
+  } else if (placeOption) {
+    event.preventDefault();
+    selectPlace(
+      placeOption.dataset.placeName,
+      Number(placeOption.dataset.placeLat),
+      Number(placeOption.dataset.placeLng)
+    );
   }
 });
 
