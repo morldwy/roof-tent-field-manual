@@ -146,7 +146,12 @@ def research(lat, lng):
                     return json.load(response)["elements"]
 
             elements = fetch(query(lat, lng))
-            coast = coastline_points(fetch(coastline_query(lat, lng)))
+            try:
+                coast = coastline_points(fetch(coastline_query(lat, lng)))
+            except Exception:
+                # Eine optionale Küstenklassifizierung darf bereits geladene
+                # Binnenland-Kandidaten nicht verwerfen.
+                coast = []
             return [
                 item
                 for item in (spot(element, coast) for element in elements)
@@ -157,11 +162,7 @@ def research(lat, lng):
     raise RuntimeError("No research provider available")
 
 
-def grid(region):
-    if region == "europe":
-        south, north, west, east = 34.4, 71.2, -11.0, 47.5
-    else:
-        south, north, west, east = 47.4, 55.1, 5.9, 15.1
+def rectangle_grid(south, north, west, east):
     points = []
     lat = south
     while lat <= north:
@@ -174,10 +175,31 @@ def grid(region):
     return points
 
 
+def grid(region):
+    if region == "focus":
+        # Polen, Tschechien, Österreich und Slowenien – bewusst vor dem
+        # großflächigen Europa-Raster recherchieren.
+        bounds = (
+            (49.0, 55.0, 14.0, 24.3),  # Polen
+            (48.5, 51.2, 12.0, 18.9),  # Tschechien
+            (46.3, 49.1, 9.4, 17.2),   # Österreich
+            (45.4, 47.0, 13.3, 16.7),  # Slowenien
+        )
+        unique = {
+            point
+            for country_bounds in bounds
+            for point in rectangle_grid(*country_bounds)
+        }
+        return sorted(unique)
+    if region == "europe":
+        return rectangle_grid(34.4, 71.2, -11.0, 47.5)
+    return rectangle_grid(47.4, 55.1, 5.9, 15.1)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch", type=int, default=4)
-    parser.add_argument("--region", choices=("germany", "europe"), default="germany")
+    parser.add_argument("--region", choices=("germany", "focus", "europe"), default="germany")
     parser.add_argument("--lat", type=float)
     parser.add_argument("--lng", type=float)
     args = parser.parse_args()

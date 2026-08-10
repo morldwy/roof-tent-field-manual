@@ -40,7 +40,9 @@ test("map, filters, search and guide UGC remain present", async () => {
 });
 
 test("guide includes a practical and sourced sanitation chapter", async () => {
-  const [guide, guideScript] = await Promise.all([read("guide.html"), read("guide.js")]);
+  const [guide, guideScript, sourcesSql] = await Promise.all([
+    read("guide.html"), read("guide.js"), read("supabase-guide-products-setup.sql")
+  ]);
   assert.match(guide, /id="sanitation"/);
   assert.match(guide, /Nacht-Toilettenkit/);
   assert.match(guide, /Human-Waste-Beutel/);
@@ -52,8 +54,8 @@ test("guide includes a practical and sourced sanitation chapter", async () => {
   assert.match(guide, /HappyPo/);
   assert.match(guide, /Trockentrenntoilette/);
   assert.match(guide, /Outdoor entledigen/);
-  assert.match(guide, /cdc\.gov\/norovirus/);
-  assert.match(guide, /nps\.gov\/articles/);
+  assert.match(sourcesSql, /cdc\.gov\/norovirus/);
+  assert.match(sourcesSql, /nps\.gov\/articles/);
   assert.match(guide, /data-check="sanitary-waste"/);
   assert.match(guideScript, /sanitation: "Sanitär & Hygiene"/);
 });
