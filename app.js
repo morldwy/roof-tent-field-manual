@@ -48,6 +48,9 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 }).addTo(map);
 
 const markers = new Map();
+const clusterMarkers = [];
+const DETAIL_RADIUS_KM = 25;
+const CLUSTER_RADIUS_KM = 25;
 const detailDialog = document.querySelector("#spot-detail");
 const detailContent = document.querySelector("#detail-content");
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
@@ -257,11 +260,12 @@ function selectSuggestion(spotId) {
   const spot = spots.find(item => item.id === spotId);
   if (!spot) return;
   searchInput.value = spot.name;
-  searchQuery = spot.name;
+  searchQuery = "";
+  searchCenter = { lat: spot.lat, lng: spot.lng };
+  visibleSpotLimit = 10;
   closeSuggestions();
-  render();
   map.setView([spot.lat, spot.lng], 14);
-  markers.get(spot.id)?.openPopup();
+  loadNearbySpots(searchCenter).then(() => markers.get(spot.id)?.openPopup());
   document.querySelector("#map").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
@@ -313,16 +317,77 @@ function addMarker(spot) {
   markers.set(spot.id, marker);
 }
 
-function syncMarkers() {
-  const currentIds = new Set(spots.map(spot => spot.id));
+function clusterIcon(count) {
+  const size = count >= 100 ? 48 : count >= 10 ? 42 : 36;
+  return L.divIcon({
+    className: "",
+    html: `<span class="spot-cluster" aria-label="${count} Spots im 25-km-Cluster"><strong>${count}</strong><small>25 km</small></span>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2]
+  });
+}
+
+function clusterSpots(remoteSpots) {
+  const clusters = [];
+  const buckets = new Map();
+  const cellDegrees = CLUSTER_RADIUS_KM / 111;
+  const bucketKey = (latCell, lngCell) => `${latCell}:${lngCell}`;
+
+  for (const spot of remoteSpots) {
+    const latCell = Math.floor(spot.lat / cellDegrees);
+    const lngCell = Math.floor(spot.lng / cellDegrees);
+    const candidates = [];
+    for (let latOffset = -1; latOffset <= 1; latOffset += 1) {
+      for (let lngOffset = -4; lngOffset <= 4; lngOffset += 1) {
+        candidates.push(...(buckets.get(bucketKey(latCell + latOffset, lngCell + lngOffset)) || []));
+      }
+    }
+    let cluster = candidates.find(item => distanceKm(item.center, spot) <= CLUSTER_RADIUS_KM);
+    if (!cluster) {
+      cluster = { center: { lat: spot.lat, lng: spot.lng }, spots: [] };
+      clusters.push(cluster);
+      const key = bucketKey(latCell, lngCell);
+      buckets.set(key, [...(buckets.get(key) || []), cluster]);
+    }
+    cluster.spots.push(spot);
+  }
+  return clusters;
+}
+
+function syncContextMarkers(detailSpots, clusters) {
+  const currentIds = new Set(detailSpots.map(spot => spot.id));
   for (const [id, marker] of markers) {
     if (!currentIds.has(id)) {
       marker.remove();
       markers.delete(id);
     }
   }
-  spots.forEach(spot => {
-    if (!markers.has(spot.id)) addMarker(spot);
+  detailSpots.forEach(spot => {
+    if (!markers.has(spot.id)) {
+      addMarker(spot);
+    } else {
+      markers.get(spot.id)?.setPopupContent(popupMarkup(spot));
+    }
+  });
+
+  clusterMarkers.splice(0).forEach(marker => marker.remove());
+  clusters.forEach(cluster => {
+    const marker = L.marker([cluster.center.lat, cluster.center.lng], {
+      icon: clusterIcon(cluster.spots.length),
+      keyboard: true,
+      bubblingMouseEvents: false,
+      title: `${cluster.spots.length} Spots im Umkreis von 25 km`
+    }).addTo(map);
+    marker.bindTooltip(`${cluster.spots.length} Spots · für Details öffnen`, { direction: "top" });
+    marker.on("click", () => {
+      searchCenter = { ...cluster.center };
+      if (selectedLocationPin) {
+        selectedLocationPin.setLatLng([cluster.center.lat, cluster.center.lng]);
+      }
+      map.setView([cluster.center.lat, cluster.center.lng], Math.max(map.getZoom(), 10));
+      loadNearbySpots(searchCenter);
+    });
+    clusterMarkers.push(marker);
   });
 }
 
@@ -354,12 +419,18 @@ function visibleSearchArea(center) {
 }
 
 function searchCacheKey(area) {
-  return `db-spots:v5:${area.south.toFixed(2)}:${area.north.toFixed(2)}:${area.west.toFixed(2)}:${area.east.toFixed(2)}`;
+  return `db-spots:v6:${area.south.toFixed(2)}:${area.north.toFixed(2)}:${area.west.toFixed(2)}:${area.east.toFixed(2)}`;
+}
+
+function isLargeSearchArea(area) {
+  return searchRadius === "europe"
+    || area.north - area.south > 5
+    || area.east - area.west > 8;
 }
 
 async function fetchStoredSpots(area) {
   const pageSize = 1000;
-  const maxResults = searchRadius === "europe" ? 5000 : 1000;
+  const maxResults = isLargeSearchArea(area) ? 5000 : 2000;
   const stored = [];
 
   for (let from = 0; from < maxResults; from += pageSize) {
@@ -396,7 +467,7 @@ async function loadNearbySpots(center) {
       const stored = await fetchStoredSpots(area);
       discovered = stored.map(spot => ({ ...spot, sourceUrl: spot.source_url }));
 
-      if (searchRadius !== "europe") {
+      if (!isLargeSearchArea(area)) {
         sessionStorage.setItem(key, JSON.stringify(discovered));
       }
     }
@@ -404,7 +475,7 @@ async function loadNearbySpots(center) {
 
     discovered = discovered
       .sort((a, b) => distanceKm(center, a) - distanceKm(center, b))
-      .slice(0, searchRadius === "europe" ? 5000 : 1000);
+      .slice(0, isLargeSearchArea(area) ? 5000 : 2000);
     const curatedNearby = curatedSpots.filter(spot =>
       spot.lat >= area.south && spot.lat <= area.north
       && spot.lng >= area.west && spot.lng <= area.east
@@ -415,11 +486,10 @@ async function loadNearbySpots(center) {
       ...discovered.filter(spot => !knownCoordinates.has(`${spot.lat.toFixed(3)}:${spot.lng.toFixed(3)}`))
     ].sort((a, b) => distanceKm(center, a) - distanceKm(center, b));
     visibleSpotLimit = 10;
-    syncMarkers();
-    render();
+    const context = render();
     scheduleCommunityLoad();
     status.textContent = spots.length
-      ? `${discovered.length >= (searchRadius === "europe" ? 5000 : 1000) ? "Mindestens " : ""}${spots.length} Orte ${searchRadius === "europe" ? "in Europa" : "im sichtbaren Kartenausschnitt"}`
+      ? `${context.detailCount} Detailspots im 25-km-Umkreis · ${context.clusterCount} Cluster im Kartenausschnitt${discovered.length >= (isLargeSearchArea(area) ? 5000 : 2000) ? " · mindestens 5.000 Treffer geladen" : ""}`
       : "Noch keine gespeicherten Orte in diesem Kartenausschnitt";
   } catch (error) {
     console.error("Nearby search failed", error);
@@ -429,7 +499,6 @@ async function loadNearbySpots(center) {
     );
     spots = curatedNearby.sort((a, b) => distanceKm(center, a) - distanceKm(center, b));
     visibleSpotLimit = 10;
-    syncMarkers();
     render();
     scheduleCommunityLoad();
     status.textContent = `${spots.length} gespeicherte Orte – Hintergrundrecherche vorübergehend nicht erreichbar`;
@@ -480,28 +549,23 @@ function card(spot) {
 function render() {
   const normalizedQuery = normalizeSearch(searchQuery);
   const matchedIds = normalizedQuery ? new Set(matchingSpots().map(spot => spot.id)) : null;
-  const visible = spots.filter(spot =>
+  const filtered = spots.filter(spot =>
     (activeFilter === "all" || spot.type === activeFilter)
     && (activePermissionFilter === "all" || spot.status === activePermissionFilter)
     && (!matchedIds || matchedIds.has(spot.id))
   );
-  const listed = visible.slice(0, visibleSpotLimit);
+  const detailSpots = filtered.filter(spot => distanceKm(searchCenter, spot) <= DETAIL_RADIUS_KM);
+  const remoteSpots = filtered.filter(spot => distanceKm(searchCenter, spot) > DETAIL_RADIUS_KM);
+  const listed = detailSpots.slice(0, visibleSpotLimit);
   spotList.innerHTML = listed.length
     ? listed.map(card).join("")
-    : '<div class="empty-state"><strong>Keine passenden Orte</strong><span>Ändere die Suche, den Kartenausschnitt oder einen Filter.</span></div>';
-  document.querySelector("#count").textContent = `${visible.length} Orte`;
-  loadMoreSpotsButton.hidden = listed.length >= visible.length;
-  loadMoreSpotsButton.textContent = `Weitere ${Math.min(10, visible.length - listed.length)} Spots anzeigen`;
-
-  const visibleIds = new Set(visible.map(spot => spot.id));
-  spots.forEach(spot => {
-    const marker = markers.get(spot.id);
-    marker?.setPopupContent(popupMarkup(spot));
-    const shouldShow = visibleIds.has(spot.id);
-    if (shouldShow && !map.hasLayer(marker)) marker.addTo(map);
-    if (!shouldShow && map.hasLayer(marker)) marker.removeFrom(map);
-  });
-
+    : '<div class="empty-state"><strong>Keine Detailspots im 25-km-Umkreis</strong><span>Öffne einen Kartencluster oder wähle einen anderen Standort.</span></div>';
+  document.querySelector("#count").textContent = `${detailSpots.length} Spots innerhalb 25 km`;
+  loadMoreSpotsButton.hidden = listed.length >= detailSpots.length;
+  loadMoreSpotsButton.textContent = `Weitere ${Math.min(10, detailSpots.length - listed.length)} Spots anzeigen`;
+  const clusters = clusterSpots(remoteSpots);
+  syncContextMarkers(detailSpots, clusters);
+  return { detailCount: detailSpots.length, clusterCount: clusters.length };
 }
 
 loadMoreSpotsButton.addEventListener("click", () => {
@@ -716,7 +780,15 @@ async function saveComment(event) {
 async function loadData() {
   if (!state.user) return;
   const sequence = ++communitySequence;
-  const spotIds = [...new Set(spots.map(spot => spot.id))];
+  // Community data is only needed for detail spots in the current context.
+  // Avoid dozens of requests when the map is showing a Europe-wide overview.
+  const contextualSpots = spots.filter(
+    spot => distanceKm(searchCenter, spot) <= DETAIL_RADIUS_KM
+  );
+  const spotIds = [...new Set([
+    ...contextualSpots.map(spot => spot.id),
+    ...(activeSpotId ? [activeSpotId] : [])
+  ])];
   const chunks = [];
   for (let index = 0; index < spotIds.length; index += 150) {
     chunks.push(spotIds.slice(index, index + 150));
@@ -788,7 +860,6 @@ async function initializeBackend() {
   }
 }
 
-spots.forEach(addMarker);
 render();
 loadNearbySpots(searchCenter);
 

@@ -48,6 +48,18 @@ test("spot search provides ranked keyboard-accessible autocomplete", async () =>
   assert.match(app, /requestAnimationFrame/);
 });
 
+test("map limits detail markers to 25 km and clusters remote spots", async () => {
+  const [app, index] = await Promise.all([read("app.js"), read("index.html")]);
+  assert.match(app, /DETAIL_RADIUS_KM = 25/);
+  assert.match(app, /CLUSTER_RADIUS_KM = 25/);
+  assert.match(app, /function clusterSpots/);
+  assert.match(app, /function syncContextMarkers/);
+  assert.match(app, /cluster\.spots\.length/);
+  assert.match(app, /const contextualSpots = spots\.filter/);
+  assert.match(app, /distanceKm\(searchCenter, spot\) <= DETAIL_RADIUS_KM/);
+  assert.match(index, /Im 25-km-Umkreis/);
+});
+
 test("dynamic community and OSM content is escaped and external URLs are constrained", async () => {
   const [app, index, guide] = await Promise.all([read("app.js"), read("index.html"), read("guide.html")]);
   assert.match(app, /function safeExternalUrl/);

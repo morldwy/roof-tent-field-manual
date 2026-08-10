@@ -432,6 +432,21 @@ footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align:
   border: 3px solid white; border-radius: 50%; color: white; box-shadow: 0 2px 8px #17372f88;
   font-size: .95rem;
 }
+.spot-cluster {
+  display: grid;
+  place-content: center;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: .25rem;
+  border: 3px solid white;
+  border-radius: 50%;
+  color: white;
+  background: rgba(23, 55, 47, .94);
+  box-shadow: 0 3px 12px rgba(9, 31, 25, .35);
+  text-align: center;
+}
+.spot-cluster strong { font-size: .82rem; line-height: 1; }
+.spot-cluster small { margin-top: .12rem; color: #dce9e2; font-size: .48rem; line-height: 1; }
 .map-popup { min-width: 230px; color: var(--ink); }
 .map-popup-title { display: flex; align-items: start; justify-content: space-between; gap: .6rem; margin-bottom: .3rem; }
 .map-popup-title strong { font-family: var(--serif); font-size: 1.05rem; }
