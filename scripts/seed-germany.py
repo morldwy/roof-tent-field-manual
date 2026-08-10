@@ -14,8 +14,10 @@ PROJECT_URL = "https://cpnxysplsqolgvurezpe.supabase.co"
 OVERPASS = (
     "https://overpass-api.de/api/interpreter",
     "https://overpass.private.coffee/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
 )
-IMPORT_KEY_FILE = pathlib.Path("/tmp/spot-import-key")
+LOCAL_STATE_DIR = pathlib.Path(__file__).parents[1] / ".local"
+IMPORT_KEY_FILE = LOCAL_STATE_DIR / "spot-import-key"
 
 
 def request_json(url, *, data=None, headers=None, timeout=45):
@@ -179,10 +181,15 @@ def main():
     parser.add_argument("--lat", type=float)
     parser.add_argument("--lng", type=float)
     args = parser.parse_args()
-    state_file = pathlib.Path(f"/tmp/roof-tent-field-manual-seed-{args.region}.json")
+    LOCAL_STATE_DIR.mkdir(mode=0o700, exist_ok=True)
+    state_file = LOCAL_STATE_DIR / f"seed-{args.region}.json"
+    temporary_state_file = pathlib.Path(f"/tmp/roof-tent-field-manual-seed-{args.region}.json")
     previous_state_file = pathlib.Path(f"/tmp/scandinavian-field-manual-seed-{args.region}.json")
-    if not state_file.exists() and previous_state_file.exists():
-        state_file.write_text(previous_state_file.read_text())
+    if not state_file.exists():
+        for legacy_file in (temporary_state_file, previous_state_file):
+            if legacy_file.exists():
+                state_file.write_text(legacy_file.read_text())
+                break
     state = json.loads(state_file.read_text()) if state_file.exists() else {"next": 0, "imported": 0}
     points = grid(args.region)
     key = public_key()
