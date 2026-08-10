@@ -58,6 +58,22 @@ test("guide includes a practical and sourced sanitation chapter", async () => {
   assert.match(guideScript, /sanitation: "Sanitär & Hygiene"/);
 });
 
+test("purchase recommendations are Supabase-managed and admin-only writable", async () => {
+  const [guide, guideScript, admin, adminScript, sql] = await Promise.all([
+    read("guide.html"), read("guide.js"), read("admin.html"), read("admin.js"), read("supabase-guide-products-setup.sql")
+  ]);
+  assert.match(guide, /id="guide-products"/);
+  assert.match(guideScript, /from\("guide_products"\)/);
+  assert.match(guideScript, /\.eq\("enabled", true\)/);
+  assert.match(admin, /id="admin-products"/);
+  assert.match(adminScript, /from\("app_admins"\)/);
+  assert.match(adminScript, /signInWithOtp/);
+  assert.match(sql, /alter table public\.guide_products enable row level security/);
+  assert.match(sql, /exists \(select 1 from public\.app_admins/);
+  assert.match(sql, /Thetford Porta Potti 335/);
+  assert.doesNotMatch(sql, /service[_-]?role/i);
+});
+
 test("spot cards and details include nearby OSM toilets and opening hours", async () => {
   const [app, index] = await Promise.all([read("app.js"), read("index.html")]);
   assert.match(app, /function loadNearbyToilets/);

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+  <title>Bezugstipps verwalten · Roof Tent Manual</title>
+  <link rel="stylesheet" href="styles.css?v=20260810-4">
+</head>
+<body class="admin-page">
+  <nav class="topnav" aria-label="Hauptnavigation">
+    <a class="brand" href="guide.html"><span>▲</span> Roof Tent Manual</a>
+    <div class="topnav-links"><a href="index.html">⌖ Standortsuche</a><a href="guide.html">⌂ Dachzelt-Guide</a></div>
+  </nav>
+  <main class="admin-main">
+    <p class="eyebrow">Geschützter Bereich</p>
+    <h1>Bezugstipps verwalten</h1>
+    <p class="admin-intro">Links lassen sich aktivieren, deaktivieren, bearbeiten, sortieren oder ergänzen. Der öffentliche Guide zeigt ausschließlich aktivierte Einträge.</p>
+
+    <section id="admin-auth" class="admin-panel">
+      <h2>Admin-Anmeldung</h2>
+      <form id="admin-login">
+        <label for="admin-email">E-Mail-Adresse</label>
+        <input id="admin-email" name="email" type="email" autocomplete="email" required>
+        <button type="submit">Anmeldelink senden</button>
+      </form>
+      <p id="admin-auth-feedback" class="storage-note">Du erhältst einen einmaligen Supabase-Anmeldelink.</p>
+    </section>
+
+    <section id="admin-setup" class="admin-panel" hidden>
+      <h2>Adminrolle einmalig freischalten</h2>
+      <p>Du bist sicher angemeldet, aber deine Benutzer-ID ist noch nicht als Admin hinterlegt. Führe im Supabase SQL Editor den angezeigten Befehl einmal aus.</p>
+      <code id="admin-setup-sql"></code>
+      <button id="copy-admin-sql" type="button">SQL kopieren</button>
+    </section>
+
+    <section id="admin-products-panel" hidden>
+      <div class="admin-toolbar"><h2>Produkte & Links</h2><button id="admin-signout" type="button">Abmelden</button></div>
+      <p id="admin-feedback" class="storage-note" role="status" aria-live="polite"></p>
+      <div id="admin-products" class="admin-products"></div>
+      <form id="new-product" class="admin-panel admin-product-form">
+        <h3>Neuen Bezugstipp anlegen</h3>
+        <label>Interner Schlüssel<input name="product_key" required maxlength="80" pattern="[a-z0-9-]+"></label>
+        <label>Titel<input name="title" required maxlength="120"></label>
+        <label>Empfehlung<input name="recommendation" required maxlength="160"></label>
+        <label>Kategorie<select name="category"><option value="nachtloesung">Nachtlösung</option><option value="reinigung">Reinigung</option><option value="toilette">Toilette</option><option value="packout">Pack-out</option><option value="sichtschutz">Sichtschutz</option></select></label>
+        <label>Bezug-URL<input name="url" type="url" inputmode="url" required pattern="https://.*"></label>
+        <label>Bewertungsnotiz<input name="rating_note" required maxlength="200" value="Bewertungen und Preis vor dem Kauf prüfen"></label>
+        <label>Sortierung<input name="sort_order" type="number" value="100" min="0" max="9999"></label>
+        <label class="admin-check"><input name="enabled" type="checkbox" checked> Im Guide anzeigen</label>
+        <button type="submit">Bezugstipp anlegen</button>
+      </form>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="backend.js?v=20260728-1"></script>
+  <script src="admin.js?v=20260810-1"></script>
+</body>
+</html>

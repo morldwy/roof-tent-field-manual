@@ -8,6 +8,10 @@ create table if not exists public.guide_tips (
   reviewed_at timestamptz
 );
 
+alter table public.guide_tips drop constraint if exists guide_tips_section_check;
+alter table public.guide_tips add constraint guide_tips_section_check
+  check (section in ('setup', 'weather', 'gear', 'location', 'vehicle', 'sanitation'));
+
 create index if not exists guide_tips_status_created_idx
   on public.guide_tips (status, created_at desc);
 

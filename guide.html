@@ -7,7 +7,7 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
   <title>Dachzelt-Guide · Roof Tent Manual</title>
-  <link rel="stylesheet" href="styles.css?v=20260810-3">
+  <link rel="stylesheet" href="styles.css?v=20260810-4">
 </head>
 <body>
   <nav class="topnav" aria-label="Hauptnavigation">
@@ -230,6 +230,17 @@
             </ul>
           </div>
 
+          <section id="product-recommendations" class="product-recommendations" aria-labelledby="product-recommendations-title">
+            <div class="product-recommendations-heading">
+              <div><p class="eyebrow">Optional · ohne Affiliate-Links</p><h3 id="product-recommendations-title">Bezug & gut bewertete Beispiele</h3></div>
+              <a href="admin.html">Als Admin bearbeiten</a>
+            </div>
+            <p class="source-note">Bewertungen, Preise und Verfügbarkeit ändern sich. Angaben beim Kauf erneut prüfen; Links sind Beispiele und keine Voraussetzung für die beschriebenen Strategien.</p>
+            <div id="guide-products" class="guide-products" aria-live="polite">
+              <p class="empty">Aktivierte Bezugstipps werden geladen …</p>
+            </div>
+          </section>
+
           <div class="resource-grid sanitation-resources">
             <a href="https://www.nps.gov/articles/000/idkt_lnt_3.htm" target="_blank" rel="noopener noreferrer"><span>Praxis · National Park Service</span><strong>Kotgrube und Pack-out</strong><small>Vorbereitung, Abstände und WAG-Bag-Methode ↗</small></a>
             <a href="https://www.cdc.gov/norovirus/prevention/outdoor-camping.html" target="_blank" rel="noopener noreferrer"><span>Hygiene · CDC</span><strong>Noroviren beim Camping vermeiden</strong><small>Händewaschen, Toilettenbereich und sauberes Wasser ↗</small></a>
@@ -375,6 +386,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="backend.js?v=20260728-1"></script>
-  <script src="guide.js?v=20260810-1"></script>
+  <script src="guide.js?v=20260810-2"></script>
 </body>
 </html>

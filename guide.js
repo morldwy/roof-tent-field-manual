@@ -56,6 +56,60 @@ function escapeTip(value) {
   })[char]);
 }
 
+const productCategoryNames = {
+  nachtloesung: "Nachtlösung",
+  reinigung: "Reinigung",
+  toilette: "Toilette",
+  packout: "Pack-out",
+  sichtschutz: "Sichtschutz"
+};
+
+function safeProductUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+async function loadProductRecommendations(backend) {
+  const section = document.querySelector("#product-recommendations");
+  const container = document.querySelector("#guide-products");
+  if (!section || !container) return;
+  const { data, error } = await backend
+    .from("guide_products")
+    .select("id,title,recommendation,category,url,rating_note,sort_order")
+    .eq("enabled", true)
+    .order("sort_order", { ascending: true });
+  if (error) {
+    section.hidden = true;
+    return;
+  }
+  container.innerHTML = "";
+  (data || []).forEach(product => {
+    const href = safeProductUrl(product.url);
+    if (!href) return;
+    const card = document.createElement("article");
+    const category = document.createElement("span");
+    category.textContent = productCategoryNames[product.category] || "Ausrüstung";
+    const title = document.createElement("h4");
+    title.textContent = product.title;
+    const recommendation = document.createElement("p");
+    recommendation.textContent = product.recommendation;
+    const rating = document.createElement("small");
+    rating.textContent = product.rating_note;
+    const link = document.createElement("a");
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer nofollow";
+    link.textContent = "Bezug prüfen ↗";
+    card.append(category, title, recommendation, rating, link);
+    container.append(card);
+  });
+  if (!container.children.length) section.hidden = true;
+}
+
 async function initializeCommunity() {
   const tipsContainer = document.querySelector("#community-tips");
   const form = document.querySelector("#tip-form");
@@ -63,6 +117,7 @@ async function initializeCommunity() {
 
   try {
     const backend = window.ROOF_TENT_BACKEND.client;
+    loadProductRecommendations(backend);
     const session = await window.ROOF_TENT_BACKEND.ensureAnonymousSession();
 
     const { data: tips, error: tipsError } = await backend

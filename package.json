@@ -5,7 +5,7 @@
   "description": "Mobile-first roof tent guide and Supabase-backed scout spot map.",
   "packageManager": "pnpm@10.15.0",
   "scripts": {
-    "check": "node --check app.js && node --check backend.js && node --check guide.js && node --check scripts/build.mjs",
+    "check": "node --check app.js && node --check backend.js && node --check guide.js && node --check admin.js && node --check scripts/build.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs",
     "build": "node scripts/build.mjs",

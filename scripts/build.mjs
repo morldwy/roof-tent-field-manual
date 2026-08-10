@@ -6,10 +6,12 @@ const output = resolve(root, "dist");
 const files = [
   "index.html",
   "guide.html",
+  "admin.html",
   "styles.css",
   "app.js",
   "backend.js",
   "guide.js",
+  "admin.js",
   "supabase-config.js"
 ];
 
@@ -22,7 +24,7 @@ for (const file of files) {
 await cp(resolve(root, "assets"), resolve(output, "assets"), { recursive: true });
 await writeFile(resolve(output, ".nojekyll"), "");
 
-for (const page of ["index.html", "guide.html"]) {
+for (const page of ["index.html", "guide.html", "admin.html"]) {
   const html = await readFile(resolve(output, page), "utf8");
   if (!html.includes("Roof Tent Manual")) {
     throw new Error(`${page} does not contain the product identity`);
