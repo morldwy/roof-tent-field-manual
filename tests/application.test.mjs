@@ -48,6 +48,8 @@ test("guide includes a practical and sourced sanitation chapter", async () => {
   assert.match(guide, /Einfach und unkonventionell/);
   assert.match(guide, /Bequem und unkonventionell/);
   assert.match(guide, /Gel-Urinalbeutel/);
+  assert.match(guide, /PET-Bidetadapter/);
+  assert.match(guide, /HappyPo/);
   assert.match(guide, /Trockentrenntoilette/);
   assert.match(guide, /Outdoor entledigen/);
   assert.match(guide, /cdc\.gov\/norovirus/);
