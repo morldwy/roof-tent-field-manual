@@ -38,6 +38,22 @@ test("map, filters, search and guide UGC remain present", async () => {
   assert.match(guide, /data-check="roof-locks"/);
 });
 
+test("guide includes a practical and sourced sanitation chapter", async () => {
+  const [guide, guideScript] = await Promise.all([read("guide.html"), read("guide.js")]);
+  assert.match(guide, /id="sanitation"/);
+  assert.match(guide, /Nacht-Toilettenkit/);
+  assert.match(guide, /Human-Waste-Beutel/);
+  assert.match(guide, /Einfach und bequem/);
+  assert.match(guide, /Einfach und unkonventionell/);
+  assert.match(guide, /Bequem und unkonventionell/);
+  assert.match(guide, /Gel-Urinalbeutel/);
+  assert.match(guide, /Trockentrenntoilette/);
+  assert.match(guide, /cdc\.gov\/norovirus/);
+  assert.match(guide, /nps\.gov\/articles/);
+  assert.match(guide, /data-check="sanitary-waste"/);
+  assert.match(guideScript, /sanitation: "Sanitär & Hygiene"/);
+});
+
 test("spot search provides ranked keyboard-accessible autocomplete", async () => {
   const app = await read("app.js");
   assert.match(app, /function searchScore/);

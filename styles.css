@@ -434,6 +434,30 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
 .guide-card-grid article { padding: 1.1rem; border: 1px solid var(--line); border-radius: .75rem; background: var(--card); }
 .guide-icon { color: var(--moss); font-family: var(--serif); font-size: 2rem; }
 .guide-card-grid h3 { margin-top: .7rem; }
+.sanitation-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-top: 1.25rem; }
+.sanitation-grid article { padding: 1.1rem; border: 1px solid var(--line); border-radius: .75rem; background: var(--card); }
+.sanitation-grid h3 { margin: .55rem 0 .45rem; font-family: var(--serif); font-size: 1.18rem; }
+.sanitation-grid p, .sanitation-plan p, .hygiene-strip p { margin: 0; color: var(--muted); line-height: 1.55; }
+.sanitation-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin: 1rem 0 1.5rem; }
+.sanitation-options > article { min-width: 0; padding: 1.1rem; border: 1px solid var(--line); border-radius: .75rem; background: var(--card); }
+.option-heading { display: flex; gap: .65rem; align-items: center; margin-bottom: .8rem; }
+.option-heading span { display: grid; place-items: center; flex: 0 0 auto; width: 2rem; height: 2rem; border-radius: 50%; color: white; background: var(--moss); font-weight: 900; }
+.option-heading h3 { margin: 0; font-family: var(--serif); font-size: 1.15rem; }
+.sanitation-options .field-list { gap: .75rem; margin: 0; padding-left: 1rem; font-size: .88rem; }
+.sanitation-options .field-list strong { color: var(--ink); }
+.sanitation-plan { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin: 1.5rem 0; }
+.sanitation-plan > div { padding: 1rem; border-top: 3px solid var(--moss); background: rgba(255, 253, 247, .72); }
+.sanitation-plan span { display: block; margin-bottom: .3rem; color: var(--moss); font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.sanitation-plan strong { display: block; margin-bottom: .35rem; font-family: var(--serif); }
+.subchapter-title { margin: 1.8rem 0 1rem; font-family: var(--serif); font-size: 1.45rem; }
+.hygiene-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin: 1.5rem 0; overflow: hidden; border: 1px solid var(--line); border-radius: .75rem; background: var(--line); }
+.hygiene-strip > div { padding: 1rem; background: var(--card); }
+.hygiene-strip strong { display: block; margin-bottom: .35rem; }
+.sanitation-kit { margin: 1.5rem 0; padding: 1.1rem 1.25rem; border-radius: .75rem; color: var(--paper); background: var(--forest); }
+.sanitation-kit h3 { margin: 0 0 .6rem; font-family: var(--serif); }
+.sanitation-kit .field-list { color: rgba(255, 253, 247, .82); }
+.sanitation-kit .field-list li { border-color: rgba(255, 255, 255, .14); }
+.sanitation-resources { margin-top: 1.5rem; }
 .guide-fact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-top: 1.5rem; }
 .guide-fact-grid article { padding: 1rem; border-left: 3px solid var(--moss); background: rgba(255, 253, 247, .72); }
 .guide-fact-grid strong { font-family: var(--serif); font-size: 1.06rem; }
@@ -570,7 +594,7 @@ footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align:
   .guide-chapter { padding-bottom: 2.5rem; }
   .step-list li { grid-template-columns: 2.2rem 1fr; padding: .85rem; }
   .step-list li > span { width: 2.2rem; height: 2.2rem; }
-  .permission-cards, .guide-card-grid, .guide-fact-grid, .resource-grid, .checklist-grid, .community-tips { grid-template-columns: 1fr; }
+  .permission-cards, .guide-card-grid, .guide-fact-grid, .resource-grid, .checklist-grid, .community-tips, .sanitation-grid, .sanitation-options, .sanitation-plan, .hygiene-strip { grid-template-columns: 1fr; }
   .video-card { grid-template-columns: 1fr; }
   .video-card > div:last-child { padding: .25rem 1rem 1.1rem; }
 }

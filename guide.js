@@ -46,7 +46,8 @@ const topicNames = {
   weather: "Wetter & Schlafklima",
   gear: "Ausrüstung",
   location: "Platzwahl & Rücksicht",
-  vehicle: "Fahrzeug & Dachträger"
+  vehicle: "Fahrzeug & Dachträger",
+  sanitation: "Sanitär & Hygiene"
 };
 
 function escapeTip(value) {
