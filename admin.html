@@ -16,8 +16,8 @@
   </nav>
   <main class="admin-main">
     <p class="eyebrow">Geschützter Bereich</p>
-    <h1>Bezugstipps verwalten</h1>
-    <p class="admin-intro">Links lassen sich aktivieren, deaktivieren, bearbeiten, sortieren oder ergänzen. Der öffentliche Guide zeigt ausschließlich aktivierte Einträge.</p>
+    <h1>Guide-Quellen verwalten</h1>
+    <p class="admin-intro">Alle Bezugs-, Praxis-, Video-, Handbuch- und Herstellerlinks lassen sich aktivieren, deaktivieren, bearbeiten, sortieren oder ergänzen. Der öffentliche Guide zeigt ausschließlich aktivierte Einträge.</p>
 
     <section id="admin-auth" class="admin-panel">
       <h2>Admin-Anmeldung</h2>
@@ -37,7 +37,7 @@
     </section>
 
     <section id="admin-products-panel" hidden>
-      <div class="admin-toolbar"><h2>Produkte & Links</h2><button id="admin-signout" type="button">Abmelden</button></div>
+      <div class="admin-toolbar"><h2>Produkte & Bezugslinks</h2><button id="admin-signout" type="button">Abmelden</button></div>
       <p id="admin-feedback" class="storage-note" role="status" aria-live="polite"></p>
       <div id="admin-products" class="admin-products"></div>
       <form id="new-product" class="admin-panel admin-product-form">
@@ -52,11 +52,26 @@
         <label class="admin-check"><input name="enabled" type="checkbox" checked> Im Guide anzeigen</label>
         <button type="submit">Bezugstipp anlegen</button>
       </form>
+      <div class="admin-toolbar admin-section-heading"><h2>Guide-Quellen & Videos</h2></div>
+      <div id="admin-sources" class="admin-products"></div>
+      <form id="new-source" class="admin-panel admin-product-form">
+        <h3>Neue Guide-Quelle anlegen</h3>
+        <label>Interner Schlüssel<input name="source_key" required maxlength="80" pattern="[a-z0-9-]+"></label>
+        <label>Bereich<select name="section"><option value="sanitation">Sanitär: Praxisquellen</option><option value="media_video">Guide: Videos</option><option value="media_resource">Guide: Handbücher & Hersteller</option></select></label>
+        <label>Kennzeichnung<input name="label" required maxlength="120" placeholder="z. B. PDF · Hersteller"></label>
+        <label>Titel<input name="title" required maxlength="160"></label>
+        <label>Beschreibung<input name="description" required maxlength="240"></label>
+        <label>Ziel-URL<input name="url" type="url" inputmode="url" required pattern="https://.*"></label>
+        <label>Vorschaubild-URL (nur Videos)<input name="image_url" type="url" inputmode="url" pattern="https://.*"></label>
+        <label>Sortierung<input name="sort_order" type="number" value="100" min="0" max="9999"></label>
+        <label class="admin-check"><input name="enabled" type="checkbox" checked> Im Guide anzeigen</label>
+        <button type="submit">Guide-Quelle anlegen</button>
+      </form>
     </section>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="backend.js?v=20260728-1"></script>
-  <script src="admin.js?v=20260810-1"></script>
+  <script src="admin.js?v=20260811-2"></script>
 </body>
 </html>

@@ -110,6 +110,77 @@ async function loadProductRecommendations(backend) {
   if (!container.children.length) section.hidden = true;
 }
 
+function sourceLink(source) {
+  const href = safeProductUrl(source.url);
+  if (!href) return null;
+  const link = document.createElement("a");
+  link.href = href;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  const label = document.createElement("span");
+  label.textContent = source.label;
+  const title = document.createElement("strong");
+  title.textContent = source.title;
+  const description = document.createElement("small");
+  description.textContent = source.description;
+  link.append(label, title, description);
+  return link;
+}
+
+function sourceVideo(source) {
+  const href = safeProductUrl(source.url);
+  const imageUrl = safeProductUrl(source.image_url);
+  if (!href || !imageUrl) return null;
+  const card = document.createElement("article");
+  card.className = "video-card";
+  const preview = document.createElement("a");
+  preview.className = "video-preview";
+  preview.href = href;
+  preview.target = "_blank";
+  preview.rel = "noopener noreferrer";
+  preview.setAttribute("aria-label", `${source.title} ansehen`);
+  const image = document.createElement("img");
+  image.src = imageUrl;
+  image.alt = "";
+  image.width = 480;
+  image.height = 360;
+  image.loading = "lazy";
+  image.decoding = "async";
+  const play = document.createElement("span");
+  play.className = "play-button";
+  play.setAttribute("aria-hidden", "true");
+  play.textContent = "▶";
+  preview.append(image, play);
+  const copy = document.createElement("div");
+  const label = document.createElement("span");
+  label.textContent = source.label;
+  const title = document.createElement("h3");
+  title.textContent = source.title;
+  const description = document.createElement("p");
+  description.textContent = source.description;
+  copy.append(label, title, description);
+  card.append(preview, copy);
+  return card;
+}
+
+async function loadGuideSources(backend) {
+  const { data, error } = await backend
+    .from("guide_sources")
+    .select("id,section,label,title,description,url,image_url,sort_order")
+    .eq("enabled", true)
+    .order("sort_order", { ascending: true });
+  if (error) return;
+  ["sanitation", "media_video", "media_resource"].forEach(section => {
+    const container = document.querySelector(`#guide-sources-${section.replace("_", "-")}`);
+    if (!container) return;
+    container.innerHTML = "";
+    data.filter(source => source.section === section).forEach(source => {
+      const element = section === "media_video" ? sourceVideo(source) : sourceLink(source);
+      if (element) container.append(element);
+    });
+  });
+}
+
 async function initializeCommunity() {
   const tipsContainer = document.querySelector("#community-tips");
   const form = document.querySelector("#tip-form");
@@ -118,6 +189,7 @@ async function initializeCommunity() {
   try {
     const backend = window.ROOF_TENT_BACKEND.client;
     loadProductRecommendations(backend);
+    loadGuideSources(backend);
     const session = await window.ROOF_TENT_BACKEND.ensureAnonymousSession();
 
     const { data: tips, error: tipsError } = await backend
