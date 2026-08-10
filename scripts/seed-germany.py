@@ -191,6 +191,17 @@ def grid(region):
             for point in rectangle_grid(*country_bounds)
         }
         return sorted(unique)
+    if region == "france-italy":
+        bounds = (
+            (41.2, 51.2, -5.3, 9.7),  # Frankreich einschließlich Korsika
+            (36.6, 47.2, 6.6, 18.7),  # Italien einschließlich Inseln
+        )
+        unique = {
+            point
+            for country_bounds in bounds
+            for point in rectangle_grid(*country_bounds)
+        }
+        return sorted(unique)
     if region == "europe":
         return rectangle_grid(34.4, 71.2, -11.0, 47.5)
     return rectangle_grid(47.4, 55.1, 5.9, 15.1)
@@ -199,7 +210,11 @@ def grid(region):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch", type=int, default=4)
-    parser.add_argument("--region", choices=("germany", "focus", "europe"), default="germany")
+    parser.add_argument(
+        "--region",
+        choices=("germany", "focus", "france-italy", "europe"),
+        default="germany",
+    )
     parser.add_argument("--lat", type=float)
     parser.add_argument("--lng", type=float)
     args = parser.parse_args()
