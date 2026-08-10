@@ -51,6 +51,7 @@ const markers = new Map();
 const clusterMarkers = [];
 const DETAIL_RADIUS_KM = 25;
 const CLUSTER_RADIUS_KM = 25;
+const commonsPhotoCache = new Map();
 const detailDialog = document.querySelector("#spot-detail");
 const detailContent = document.querySelector("#detail-content");
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
@@ -317,23 +318,33 @@ function addMarker(spot) {
   markers.set(spot.id, marker);
 }
 
-function clusterIcon(count) {
+function clusterIcon(count, radiusKm) {
   const size = count >= 100 ? 48 : count >= 10 ? 42 : 36;
   return L.divIcon({
     className: "",
-    html: `<span class="spot-cluster" aria-label="${count} Spots im 25-km-Cluster"><strong>${count}</strong><small>25 km</small></span>`,
+    html: `<span class="spot-cluster" aria-label="${count} Spots im Umkreis von ${radiusKm} km"><strong>${count}</strong><small>${radiusKm} km</small></span>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2]
   });
 }
 
-function clusterSpots(remoteSpots) {
+function clusterRadiusForZoom() {
+  if (map.getZoom() >= 13) return 0;
+  if (map.getZoom() === 12) return 5;
+  return CLUSTER_RADIUS_KM;
+}
+
+function clusterSpots(visibleSpots) {
+  const radiusKm = clusterRadiusForZoom();
+  if (!radiusKm) {
+    return visibleSpots.map(spot => ({ center: { lat: spot.lat, lng: spot.lng }, spots: [spot], radiusKm: 0 }));
+  }
   const clusters = [];
   const buckets = new Map();
-  const cellDegrees = CLUSTER_RADIUS_KM / 111;
+  const cellDegrees = radiusKm / 111;
   const bucketKey = (latCell, lngCell) => `${latCell}:${lngCell}`;
 
-  for (const spot of remoteSpots) {
+  for (const spot of visibleSpots) {
     const latCell = Math.floor(spot.lat / cellDegrees);
     const lngCell = Math.floor(spot.lng / cellDegrees);
     const candidates = [];
@@ -342,9 +353,9 @@ function clusterSpots(remoteSpots) {
         candidates.push(...(buckets.get(bucketKey(latCell + latOffset, lngCell + lngOffset)) || []));
       }
     }
-    let cluster = candidates.find(item => distanceKm(item.center, spot) <= CLUSTER_RADIUS_KM);
+    let cluster = candidates.find(item => distanceKm(item.center, spot) <= radiusKm);
     if (!cluster) {
-      cluster = { center: { lat: spot.lat, lng: spot.lng }, spots: [] };
+      cluster = { center: { lat: spot.lat, lng: spot.lng }, spots: [], radiusKm };
       clusters.push(cluster);
       const key = bucketKey(latCell, lngCell);
       buckets.set(key, [...(buckets.get(key) || []), cluster]);
@@ -355,14 +366,16 @@ function clusterSpots(remoteSpots) {
 }
 
 function syncContextMarkers(detailSpots, clusters) {
-  const currentIds = new Set(detailSpots.map(spot => spot.id));
+  const individualSpots = clusters.filter(cluster => cluster.spots.length === 1).map(cluster => cluster.spots[0]);
+  const groupedClusters = clusters.filter(cluster => cluster.spots.length > 1);
+  const currentIds = new Set(individualSpots.map(spot => spot.id));
   for (const [id, marker] of markers) {
     if (!currentIds.has(id)) {
       marker.remove();
       markers.delete(id);
     }
   }
-  detailSpots.forEach(spot => {
+  individualSpots.forEach(spot => {
     if (!markers.has(spot.id)) {
       addMarker(spot);
     } else {
@@ -371,12 +384,12 @@ function syncContextMarkers(detailSpots, clusters) {
   });
 
   clusterMarkers.splice(0).forEach(marker => marker.remove());
-  clusters.forEach(cluster => {
+  groupedClusters.forEach(cluster => {
     const marker = L.marker([cluster.center.lat, cluster.center.lng], {
-      icon: clusterIcon(cluster.spots.length),
+      icon: clusterIcon(cluster.spots.length, cluster.radiusKm),
       keyboard: true,
       bubblingMouseEvents: false,
-      title: `${cluster.spots.length} Spots im Umkreis von 25 km`
+      title: `${cluster.spots.length} Spots im Umkreis von ${cluster.radiusKm} km`
     }).addTo(map);
     marker.bindTooltip(`${cluster.spots.length} Spots · für Details öffnen`, { direction: "top" });
     marker.on("click", () => {
@@ -384,7 +397,7 @@ function syncContextMarkers(detailSpots, clusters) {
       if (selectedLocationPin) {
         selectedLocationPin.setLatLng([cluster.center.lat, cluster.center.lng]);
       }
-      map.setView([cluster.center.lat, cluster.center.lng], Math.max(map.getZoom(), 10));
+      map.setView([cluster.center.lat, cluster.center.lng], Math.min(14, Math.max(map.getZoom() + 2, 12)));
       loadNearbySpots(searchCenter);
     });
     clusterMarkers.push(marker);
@@ -527,11 +540,123 @@ function starRating(spotId, compact = false) {
     </div>`;
 }
 
+function plainText(value) {
+  const template = document.createElement("template");
+  template.innerHTML = String(value || "");
+  return (template.content.textContent || "").replace(/\s+/g, " ").trim();
+}
+
+async function fetchCommonsPhotos(spot, limit = 3) {
+  if (commonsPhotoCache.has(spot.id)) return commonsPhotoCache.get(spot.id).slice(0, limit);
+  const cacheKey = `commons-media:v1:${spot.id}`;
+  const cached = sessionStorage.getItem(cacheKey);
+  if (cached) {
+    const photos = JSON.parse(cached);
+    commonsPhotoCache.set(spot.id, photos);
+    return photos.slice(0, limit);
+  }
+
+  const params = new URLSearchParams({
+    action: "query",
+    format: "json",
+    origin: "*",
+    generator: "geosearch",
+    ggsprimary: "all",
+    ggsnamespace: "6",
+    ggslimit: "8",
+    ggsradius: "10000",
+    ggscoord: `${spot.lat}|${spot.lng}`,
+    prop: "imageinfo",
+    iiprop: "url|mime|extmetadata",
+    iiurlwidth: "1200"
+  });
+  try {
+    const response = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`, {
+      headers: { Accept: "application/json" },
+      referrerPolicy: "strict-origin-when-cross-origin"
+    });
+    if (!response.ok) throw new Error(`Commons ${response.status}`);
+    const payload = await response.json();
+    const photos = Object.values(payload.query?.pages || {})
+      .sort((a, b) => (a.index || 0) - (b.index || 0))
+      .map(page => {
+        const info = page.imageinfo?.[0];
+        const url = safeExternalUrl(info?.thumburl || info?.url, ["upload.wikimedia.org"]);
+        const sourceUrl = safeExternalUrl(info?.descriptionurl, ["commons.wikimedia.org"]);
+        const mime = String(info?.mime || "");
+        if (!url || !sourceUrl || !mime.startsWith("image/") || mime.includes("svg")) return null;
+        const metadata = info.extmetadata || {};
+        return {
+          url,
+          sourceUrl,
+          alt: `Umgebungsfoto nahe ${spot.name}`,
+          credit: plainText(metadata.Artist?.value || metadata.Credit?.value || "Wikimedia Commons"),
+          license: plainText(metadata.LicenseShortName?.value || "Lizenz auf Commons")
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 3);
+    commonsPhotoCache.set(spot.id, photos);
+    try { sessionStorage.setItem(cacheKey, JSON.stringify(photos)); } catch { /* Cache ist optional. */ }
+    return photos.slice(0, limit);
+  } catch (error) {
+    console.info("Kein Commons-Umgebungsfoto verfügbar", error);
+    commonsPhotoCache.set(spot.id, []);
+    return [];
+  }
+}
+
+function communityPhotosForSpot(spotId) {
+  return (state.comments[spotId] || []).flatMap(comment => comment.photos || [])
+    .map(photo => safeExternalUrl(photo.url, ["supabase.co"]))
+    .filter(Boolean)
+    .map(url => ({ url, sourceUrl: url, alt: "Community-Foto zu diesem Spot", credit: "Community", license: "Vom Nutzer bereitgestellt" }));
+}
+
+function createMediaFigure(photo, compact = false) {
+  const figure = document.createElement("figure");
+  figure.className = compact ? "spot-media is-loaded" : "gallery-item";
+  const image = document.createElement("img");
+  image.src = photo.url;
+  image.alt = photo.alt;
+  image.loading = "lazy";
+  image.decoding = "async";
+  figure.append(image);
+  if (!compact) {
+    const caption = document.createElement("figcaption");
+    const link = document.createElement("a");
+    link.href = photo.sourceUrl;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = `${photo.credit} · ${photo.license} ↗`;
+    caption.append(link);
+    figure.append(caption);
+  }
+  return figure;
+}
+
+async function hydrateVisibleMedia(visibleSpots) {
+  await Promise.all(visibleSpots.map(async spot => {
+    const target = [...spotList.querySelectorAll("[data-spot-photo]")]
+      .find(node => node.dataset.spotPhoto === spot.id);
+    if (!target) return;
+    const photo = communityPhotosForSpot(spot.id)[0] || (await fetchCommonsPhotos(spot, 1))[0];
+    if (!photo || !target.isConnected) {
+      target.classList.add("is-empty");
+      return;
+    }
+    target.replaceWith(createMediaFigure(photo, true));
+  }));
+}
+
 function card(spot) {
   const commentCount = (state.comments[spot.id] || []).length;
   const spotId = escapeHtml(spot.id);
   return `
     <article class="spot">
+      <figure class="spot-media is-loading" data-spot-photo="${spotId}" aria-label="Umgebungsfoto wird geladen">
+        <span>${escapeHtml(spot.icon)}</span>
+      </figure>
       <div class="spot-top">
         <h3>${escapeHtml(spot.icon)} ${escapeHtml(spot.name)}</h3>
         <span class="status-dot ${spot.status}" title="${escapeHtml(spot.label)}" aria-label="${escapeHtml(spot.label)}"></span>
@@ -555,7 +680,6 @@ function render() {
     && (!matchedIds || matchedIds.has(spot.id))
   );
   const detailSpots = filtered.filter(spot => distanceKm(searchCenter, spot) <= DETAIL_RADIUS_KM);
-  const remoteSpots = filtered.filter(spot => distanceKm(searchCenter, spot) > DETAIL_RADIUS_KM);
   const listed = detailSpots.slice(0, visibleSpotLimit);
   spotList.innerHTML = listed.length
     ? listed.map(card).join("")
@@ -563,9 +687,10 @@ function render() {
   document.querySelector("#count").textContent = `${detailSpots.length} Spots innerhalb 25 km`;
   loadMoreSpotsButton.hidden = listed.length >= detailSpots.length;
   loadMoreSpotsButton.textContent = `Weitere ${Math.min(10, detailSpots.length - listed.length)} Spots anzeigen`;
-  const clusters = clusterSpots(remoteSpots);
+  const clusters = clusterSpots(filtered);
   syncContextMarkers(detailSpots, clusters);
-  return { detailCount: detailSpots.length, clusterCount: clusters.length };
+  hydrateVisibleMedia(listed);
+  return { detailCount: detailSpots.length, clusterCount: clusters.filter(cluster => cluster.spots.length > 1).length };
 }
 
 loadMoreSpotsButton.addEventListener("click", () => {
@@ -637,6 +762,7 @@ function renderDetail(spotId) {
   if (!spot) return;
   const comments = state.comments[spot.id] || [];
   const destination = `${spot.lat},${spot.lng}`;
+  const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${encodeURIComponent(destination)}`;
   const sourceUrl = safeExternalUrl(spot.sourceUrl, ["openstreetmap.org"]);
   detailContent.innerHTML = `
     <div class="detail-head">
@@ -646,6 +772,9 @@ function renderDetail(spotId) {
       <div class="detail-status"><span class="status-dot ${spot.status}"></span>${escapeHtml(spot.label)}</div>
     </div>
     <div class="detail-body">
+      <section class="spot-gallery" data-detail-gallery="${escapeHtml(spot.id)}" aria-label="Bilder zum Spot">
+        <div class="gallery-loading">Bilder aus der Umgebung werden geladen …</div>
+      </section>
       ${starRating(spot.id)}
       <p class="detail-note">${escapeHtml(spot.note)}</p>
       <dl class="facts">
@@ -653,6 +782,7 @@ function renderDetail(spotId) {
         <div><dt>Übernachtung</dt><dd>${escapeHtml(spot.label)}</dd></div>
       </dl>
       <a class="navigation-button" href="https://www.google.com/maps/dir/?api=1&destination=${destination}" target="_blank" rel="noopener">Navigation starten ↗</a>
+      <a class="streetview-button" href="${streetViewUrl}" target="_blank" rel="noopener">Street View prüfen ↗</a>
       ${sourceUrl ? `<a class="source-link" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener">Quelle: OpenStreetMap ↗</a>` : ""}
 
       <section class="comments-section">
@@ -676,10 +806,26 @@ function renderDetail(spotId) {
     </div>`;
 
   detailContent.querySelector(".close-detail").addEventListener("click", closeDetail);
+  hydrateDetailGallery(spot);
   bindRatingButtons(detailContent);
   const fileInput = detailContent.querySelector("#comment-photos");
   fileInput.addEventListener("change", () => previewFiles(fileInput.files));
   detailContent.querySelector("#comment-form").addEventListener("submit", saveComment);
+}
+
+async function hydrateDetailGallery(spot) {
+  const target = detailContent.querySelector("[data-detail-gallery]");
+  if (!target) return;
+  const communityPhotos = communityPhotosForSpot(spot.id);
+  const commonsPhotos = await fetchCommonsPhotos(spot, Math.max(0, 3 - communityPhotos.length));
+  if (activeSpotId !== spot.id || !target.isConnected) return;
+  const photos = [...communityPhotos, ...commonsPhotos].slice(0, 6);
+  target.innerHTML = "";
+  if (!photos.length) {
+    target.innerHTML = '<p class="gallery-empty">Noch kein frei verfügbares Umgebungsfoto. Du kannst unten das erste Spotfoto ergänzen.</p>';
+    return;
+  }
+  photos.forEach(photo => target.append(createMediaFigure(photo)));
 }
 
 function openDetail(spotId) {

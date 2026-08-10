@@ -217,11 +217,35 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
 .load-more-spots:hover, .load-more-spots:focus-visible { color: white; background: var(--forest); }
 .load-more-spots[hidden] { display: none; }
 .spot {
+  overflow: hidden;
   padding: 1.1rem;
   border: 1px solid var(--line);
   border-radius: .85rem;
   background: var(--card);
 }
+.spot-media {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: calc(100% + 2.2rem);
+  aspect-ratio: 16 / 9;
+  margin: -1.1rem -1.1rem 1rem;
+  overflow: hidden;
+  background: linear-gradient(135deg, #dce8df, #edf1e8);
+}
+.spot-media img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s ease; }
+.spot:hover .spot-media img { transform: scale(1.025); }
+.spot-media > span { font-size: 2rem; opacity: .65; }
+.spot-media.is-loading::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--moss), transparent);
+  animation: media-loading 1.2s infinite linear;
+  content: "";
+}
+.spot-media.is-empty { display: none; }
+@keyframes media-loading { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 .spot-top { display: flex; justify-content: space-between; gap: .75rem; }
 .spot h3 { margin: 0; font-family: var(--serif); font-size: 1.25rem; }
 .status-dot {
@@ -309,6 +333,38 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
   font-weight: 750;
   text-decoration: none;
 }
+.streetview-button {
+  display: inline-block;
+  margin: .45rem 0 .45rem .45rem;
+  padding: .7rem .95rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--forest);
+  background: white;
+  font-weight: 750;
+  text-decoration: none;
+}
+.spot-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .45rem;
+  margin-bottom: 1.2rem;
+}
+.gallery-item { position: relative; min-width: 0; margin: 0; overflow: hidden; border-radius: .65rem; background: var(--paper); }
+.gallery-item:first-child { grid-column: span 2; grid-row: span 2; }
+.gallery-item img { display: block; width: 100%; height: 100%; min-height: 118px; aspect-ratio: 4 / 3; object-fit: cover; }
+.gallery-item figcaption {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 1.4rem .5rem .4rem;
+  overflow: hidden;
+  background: linear-gradient(transparent, rgba(5, 20, 16, .82));
+  font-size: .62rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gallery-item figcaption a { color: white; text-decoration: none; }
+.gallery-loading, .gallery-empty { grid-column: 1 / -1; padding: 1.2rem; border-radius: .65rem; color: var(--muted); background: var(--paper); text-align: center; }
 .comments-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
 .comments-title { display: flex; justify-content: space-between; align-items: center; }
 .comments-title h3 { margin: 0; font-family: var(--serif); font-size: 1.5rem; }
@@ -501,6 +557,9 @@ footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align:
   .detail-dialog { max-height: 100dvh; width: 100%; margin: auto 0 0; border-radius: 1rem 1rem 0 0; }
   .facts { grid-template-columns: 1fr; }
   .photo-grid { grid-template-columns: repeat(2, 1fr); }
+  .spot-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gallery-item:first-child { grid-column: 1 / -1; grid-row: auto; }
+  .streetview-button { margin-left: 0; }
   .guide-intro, .guide-layout { grid-template-columns: 1fr; }
   .quick-grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; }
   .quick-grid article { flex: 0 0 78vw; scroll-snap-align: start; }

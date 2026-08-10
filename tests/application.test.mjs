@@ -48,16 +48,29 @@ test("spot search provides ranked keyboard-accessible autocomplete", async () =>
   assert.match(app, /requestAnimationFrame/);
 });
 
-test("map limits detail markers to 25 km and clusters remote spots", async () => {
+test("map limits detail lists to 25 km and clusters markers by zoom", async () => {
   const [app, index] = await Promise.all([read("app.js"), read("index.html")]);
   assert.match(app, /DETAIL_RADIUS_KM = 25/);
   assert.match(app, /CLUSTER_RADIUS_KM = 25/);
   assert.match(app, /function clusterSpots/);
+  assert.match(app, /function clusterRadiusForZoom/);
+  assert.match(app, /map\.getZoom\(\) >= 13/);
   assert.match(app, /function syncContextMarkers/);
   assert.match(app, /cluster\.spots\.length/);
   assert.match(app, /const contextualSpots = spots\.filter/);
   assert.match(app, /distanceKm\(searchCenter, spot\) <= DETAIL_RADIUS_KM/);
   assert.match(index, /Im 25-km-Umkreis/);
+});
+
+test("spot cards and detail view load attributed media safely", async () => {
+  const [app, index] = await Promise.all([read("app.js"), read("index.html")]);
+  assert.match(app, /function fetchCommonsPhotos/);
+  assert.match(app, /commons\.wikimedia\.org\/w\/api\.php/);
+  assert.match(app, /upload\.wikimedia\.org/);
+  assert.match(app, /data-spot-photo/);
+  assert.match(app, /data-detail-gallery/);
+  assert.match(app, /map_action=pano/);
+  assert.match(index, /connect-src[^\"]*commons\.wikimedia\.org/);
 });
 
 test("dynamic community and OSM content is escaped and external URLs are constrained", async () => {
