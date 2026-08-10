@@ -62,13 +62,13 @@ values
   ('pibella-travel', 'Pibella Travel', 'Anatomische Urinierhilfe', 'nachtloesung', 'https://pibella.com/', 'Herstellerbeispiel · Eignung zuhause testen', true, 10),
   ('nalgene-wide-mouth', 'Nalgene 1 l Wide Mouth', 'Dicht schließende Weithalsflasche', 'nachtloesung', 'https://nalgene.eu/de/produktkategorie/nach-grose/1l-de/', 'Herstellerbeispiel · ausschließlich markiert als Urinflasche nutzen', true, 20),
   ('traveljohn', 'TravelJohn Einwegurinal', 'Gel-Urinalbeutel für den Notfall', 'nachtloesung', 'https://www.airteam.eu/de/p/traveljohn', 'Etabliertes Produktbeispiel · Preis und Bewertungen prüfen', true, 30),
-  ('happypo', 'HappyPo Easy Bidet', 'Reisepo-Dusche', 'reinigung', 'https://www.happypo.de/products/easy-bidet', 'Hersteller verweist aktuell auf Handelspartner · Verfügbarkeit prüfen', true, 40),
+  ('happypo', 'HappyPo Easy Bidet', 'Reisepo-Dusche', 'reinigung', 'https://www.dm.de/happypo-po-dusche-easy-bidet-p4260487760010.html', 'Erreichbare Händlerseite · Verfügbarkeit und Preis prüfen', true, 40),
   ('cleanwaste', 'Cleanwaste GO Anywhere', 'Falttoilette und Pack-out-System', 'packout', 'https://cleanwaste.com/product/go-anywhere-total-system/', 'Herstellerbeispiel · EU-Verfügbarkeit und Entsorgung prüfen', true, 50),
   ('thetford-335', 'Thetford Porta Potti 335', 'Kompakte Toilette mit Spülung', 'toilette', 'https://www.fritz-berger.de/artikel/thetford-porta-potti-335-tragbare-campingtoilette-116928?varid=69095', '4,9/5 aus 52 verifizierten Händlerbewertungen · Stand 10.08.2026', true, 60),
   ('boxio-toilet', 'BOXIO Toilet', 'Trockentrenntoilette im Euroboxformat', 'toilette', 'https://boxio.de/products/trenntoilette', '242 Produktbewertungen beim Hersteller · Stand 10.08.2026', true, 70),
   ('trelino-evo-s', 'Trelino Evo S', 'Kompakte Trockentrenntoilette', 'toilette', 'https://www.trelino.com/de/products/trelino%C2%AE-evo-s', 'Marke 4,7/5 bei 1.094 Trustpilot-Bewertungen · Stand 10.08.2026', true, 80),
   ('clesana-x1', 'Clesana X1', 'Mobile Verschweißtoilette', 'toilette', 'https://www.shop.clesana.com/products/clesana-x1', 'Premiumbeispiel · Preis, Akku und Verfügbarkeit prüfen', true, 90),
-  ('wolfwise-privacy', 'WolfWise Privacy Tent', 'Pop-up-Sichtschutz für Toilette und Dusche', 'sichtschutz', 'https://www.wolfwise.com/products/wolfwise-instant-pop-up-privacy-tent-lp250644bl', 'Herstellerbewertungen vorhanden · Lieferbarkeit in Europa prüfen', true, 100)
+  ('wolfwise-privacy', 'WolfWise Privacy Tent', 'Pop-up-Sichtschutz für Toilette und Dusche', 'sichtschutz', 'https://www.wolfwise.com/products/wolfwise-pop-up-privacy-shower-tent-lp250644bl', 'Herstellerbewertungen vorhanden · Lieferbarkeit in Europa prüfen', true, 100)
 on conflict (product_key) do update set
   title = excluded.title,
   recommendation = excluded.recommendation,
