@@ -33,6 +33,7 @@ test("map, filters, search and guide UGC remain present", async () => {
   assert.match(index, /id="search-suggestions"/);
   assert.match(index, /data-filter="meer"/);
   assert.match(index, /data-permission="amber"/);
+  assert.match(index, /data-toilet="nearby"/);
   assert.match(index, /verantwortungsvollen Übernachten in deinem Dachzelt/);
   assert.match(guide, /id="tip-form"/);
   assert.match(guide, /data-check="roof-locks"/);
@@ -48,10 +49,22 @@ test("guide includes a practical and sourced sanitation chapter", async () => {
   assert.match(guide, /Bequem und unkonventionell/);
   assert.match(guide, /Gel-Urinalbeutel/);
   assert.match(guide, /Trockentrenntoilette/);
+  assert.match(guide, /Outdoor entledigen/);
   assert.match(guide, /cdc\.gov\/norovirus/);
   assert.match(guide, /nps\.gov\/articles/);
   assert.match(guide, /data-check="sanitary-waste"/);
   assert.match(guideScript, /sanitation: "Sanitär & Hygiene"/);
+});
+
+test("spot cards and details include nearby OSM toilets and opening hours", async () => {
+  const [app, index] = await Promise.all([read("app.js"), read("index.html")]);
+  assert.match(app, /function loadNearbyToilets/);
+  assert.match(app, /amenity.{0,20}toilets/);
+  assert.match(app, /opening_hours/);
+  assert.match(app, /function nearestToilets/);
+  assert.match(app, /Toiletten in der Nähe/);
+  assert.match(app, /activeToiletFilter/);
+  assert.match(index, /overpass-api\.de/);
 });
 
 test("spot search provides ranked keyboard-accessible autocomplete", async () => {

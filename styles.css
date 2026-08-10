@@ -176,7 +176,7 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
   white-space: nowrap;
 }
 .search-suggestion small { color: var(--muted); white-space: nowrap; }
-.filter-groups { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1rem 1.5rem; margin-bottom: .25rem; }
+.filter-groups { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1rem 1.5rem; margin-bottom: .25rem; }
 .filter-label { display: block; margin-bottom: .25rem; color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .filters { display: flex; gap: .5rem; overflow-x: auto; padding: .25rem 0 1rem; }
 .filter { border-color: var(--line); color: var(--ink); background: var(--card); white-space: nowrap; }
@@ -262,6 +262,9 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
 .status-dot.red { background: var(--red); }
 .meta { margin: .55rem 0; color: var(--moss); font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
 .spot p { color: var(--muted); line-height: 1.5; }
+.toilet-summary { display: grid; gap: .2rem; margin: .8rem 0 1rem; padding: .7rem .8rem; border-radius: .55rem; background: var(--paper); }
+.toilet-summary strong { color: var(--forest); font-size: .88rem; }
+.toilet-summary small { color: var(--muted); font-size: .75rem; }
 .actions { display: flex; flex-wrap: wrap; gap: .8rem; }
 .actions button { color: var(--forest); font-weight: 750; padding: 0; border: 0; background: transparent; cursor: pointer; }
 
@@ -365,6 +368,16 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
 }
 .gallery-item figcaption a { color: white; text-decoration: none; }
 .gallery-loading, .gallery-empty { grid-column: 1 / -1; padding: 1.2rem; border-radius: .65rem; color: var(--muted); background: var(--paper); text-align: center; }
+.nearby-toilets { margin: 1.5rem 0; padding: 1.15rem; border: 1px solid var(--line); border-radius: .75rem; background: #f5f4eb; }
+.nearby-toilets .comments-title h3 { font-size: 1.3rem; }
+.toilet-disclaimer { margin: .55rem 0 1rem; color: var(--muted); font-size: .75rem; line-height: 1.45; }
+.toilet-list { display: grid; gap: .6rem; }
+.toilet-list article { display: grid; gap: .5rem; padding: .8rem; border-radius: .55rem; background: white; }
+.toilet-list article > div:first-child { display: flex; justify-content: space-between; gap: .75rem; }
+.toilet-list article small { color: var(--muted); text-align: right; }
+.toilet-list article p { margin: 0; font-size: .82rem; }
+.toilet-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.toilet-actions a { color: var(--forest); font-size: .78rem; font-weight: 750; text-decoration: none; }
 .comments-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
 .comments-title { display: flex; justify-content: space-between; align-items: center; }
 .comments-title h3 { margin: 0; font-family: var(--serif); font-size: 1.5rem; }
@@ -445,6 +458,10 @@ main { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0
 .option-heading h3 { margin: 0; font-family: var(--serif); font-size: 1.15rem; }
 .sanitation-options .field-list { gap: .75rem; margin: 0; padding-left: 1rem; font-size: .88rem; }
 .sanitation-options .field-list strong { color: var(--ink); }
+.outdoor-relief-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin-bottom: 1rem; }
+.outdoor-relief-grid article { padding: 1rem; border-left: 3px solid var(--moss); background: rgba(255, 253, 247, .72); }
+.outdoor-relief-grid strong { font-family: var(--serif); font-size: 1.05rem; }
+.outdoor-relief-grid p { margin: .45rem 0 0; color: var(--muted); line-height: 1.55; }
 .sanitation-plan { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin: 1.5rem 0; }
 .sanitation-plan > div { padding: 1rem; border-top: 3px solid var(--moss); background: rgba(255, 253, 247, .72); }
 .sanitation-plan span { display: block; margin-bottom: .3rem; color: var(--moss); font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
@@ -594,7 +611,7 @@ footer { padding: 2rem 1rem; color: #cfded6; background: var(--ink); text-align:
   .guide-chapter { padding-bottom: 2.5rem; }
   .step-list li { grid-template-columns: 2.2rem 1fr; padding: .85rem; }
   .step-list li > span { width: 2.2rem; height: 2.2rem; }
-  .permission-cards, .guide-card-grid, .guide-fact-grid, .resource-grid, .checklist-grid, .community-tips, .sanitation-grid, .sanitation-options, .sanitation-plan, .hygiene-strip { grid-template-columns: 1fr; }
+  .permission-cards, .guide-card-grid, .guide-fact-grid, .resource-grid, .checklist-grid, .community-tips, .sanitation-grid, .sanitation-options, .sanitation-plan, .outdoor-relief-grid, .hygiene-strip { grid-template-columns: 1fr; }
   .video-card { grid-template-columns: 1fr; }
   .video-card > div:last-child { padding: .25rem 1rem 1.1rem; }
 }

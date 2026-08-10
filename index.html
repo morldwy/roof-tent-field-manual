@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#183d34">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://photon.komoot.io https://commons.wikimedia.org; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://photon.komoot.io https://commons.wikimedia.org https://overpass-api.de; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
   <title>Wild Spots · Roof Tent Manual</title>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=20260810-2">
+  <link rel="stylesheet" href="styles.css?v=20260810-3">
 </head>
 <body>
   <nav class="topnav" aria-label="Hauptnavigation">
@@ -68,6 +68,13 @@
           <button class="filter permission-filter" data-permission="red"><i class="dot red"></i> Keine Übernachtung</button>
         </nav>
       </div>
+      <div>
+        <span class="filter-label">Toilette</span>
+        <nav class="filters" aria-label="Toilette in der Nähe">
+          <button class="filter toilet-filter active" data-toilet="all">Alle</button>
+          <button class="filter toilet-filter" data-toilet="nearby">🚻 Maximal 5 km</button>
+        </nav>
+      </div>
     </section>
 
     <div class="location-toolbar">
@@ -124,6 +131,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="backend.js?v=20260728-1"></script>
-  <script src="app.js?v=20260810-2"></script>
+  <script src="app.js?v=20260810-3"></script>
 </body>
 </html>

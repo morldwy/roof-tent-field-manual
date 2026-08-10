@@ -73,6 +73,10 @@ let placeSuggestions = [];
 let visibleSpotLimit = 10;
 let communityTimer = 0;
 let communitySequence = 0;
+let toilets = [];
+let toiletSearchReady = false;
+let toiletSearchSequence = 0;
+let activeToiletFilter = "all";
 
 const backend = window.ROOF_TENT_BACKEND.client;
 const state = { ratings: {}, ratingCounts: {}, comments: {}, user: null, ready: false };
@@ -415,6 +419,82 @@ function distanceKm(a, b) {
   return earthRadius * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
+function toiletCacheKey(center) {
+  return `osm-toilets:v1:${center.lat.toFixed(1)}:${center.lng.toFixed(1)}`;
+}
+
+function normalizeToilet(element) {
+  const lat = Number(element.lat ?? element.center?.lat);
+  const lng = Number(element.lon ?? element.center?.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  const tags = element.tags || {};
+  return {
+    id: `toilet-${element.type}-${element.id}`,
+    name: tags.name || tags.operator || "Öffentliche Toilette",
+    lat,
+    lng,
+    openingHours: tags.opening_hours || "",
+    access: tags.access || tags["toilets:access"] || "yes",
+    fee: tags.fee || tags["toilets:fee"] || "unknown",
+    wheelchair: tags.wheelchair || tags["toilets:wheelchair"] || "unknown",
+    sourceUrl: `https://www.openstreetmap.org/${element.type}/${element.id}`
+  };
+}
+
+function openingHoursLabel(value) {
+  if (!value) return "Öffnungszeiten nicht hinterlegt";
+  return value === "24/7" ? "Rund um die Uhr" : value;
+}
+
+function toiletAccessLabel(toilet) {
+  if (["customers", "permissive", "destination"].includes(toilet.access)) return "Zugang eingeschränkt";
+  if (["private", "no"].includes(toilet.access)) return "Nicht öffentlich";
+  return toilet.fee === "yes" ? "Kostenpflichtig" : "Öffentlich zugänglich";
+}
+
+function nearestToilets(spot, limit = 3) {
+  return toilets
+    .filter(toilet => !["private", "no"].includes(toilet.access))
+    .map(toilet => ({ ...toilet, distance: distanceKm(spot, toilet) }))
+    .filter(toilet => toilet.distance <= 15)
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, limit);
+}
+
+async function loadNearbyToilets(center) {
+  const sequence = ++toiletSearchSequence;
+  toiletSearchReady = false;
+  const key = toiletCacheKey(center);
+  try {
+    const cached = sessionStorage.getItem(key);
+    let found;
+    if (cached) {
+      found = JSON.parse(cached);
+    } else {
+      const query = `[out:json][timeout:20];nwr(around:30000,${center.lat},${center.lng})["amenity"="toilets"];out center tags;`;
+      const response = await fetch("https://overpass-api.de/api/interpreter", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: `data=${encodeURIComponent(query)}`,
+        referrerPolicy: "strict-origin-when-cross-origin"
+      });
+      if (!response.ok) throw new Error(`Overpass ${response.status}`);
+      const payload = await response.json();
+      found = (payload.elements || []).map(normalizeToilet).filter(Boolean);
+      try { sessionStorage.setItem(key, JSON.stringify(found)); } catch { /* Cache ist optional. */ }
+    }
+    if (sequence !== toiletSearchSequence) return;
+    toilets = found;
+  } catch (error) {
+    if (sequence !== toiletSearchSequence) return;
+    console.info("Toilettensuche ist vorübergehend nicht verfügbar", error);
+    toilets = [];
+  }
+  toiletSearchReady = true;
+  render();
+  if (activeSpotId) renderDetail(activeSpotId);
+}
+
 function visibleSearchArea(center) {
   if (searchRadius === "europe") {
     return { south: 34, north: 72, west: -25, east: 50 };
@@ -501,6 +581,7 @@ async function loadNearbySpots(center) {
     visibleSpotLimit = 10;
     const context = render();
     scheduleCommunityLoad();
+    loadNearbyToilets(center);
     status.textContent = spots.length
       ? `${context.detailCount} Detailspots im 25-km-Umkreis · ${context.clusterCount} Cluster im Kartenausschnitt${discovered.length >= (isLargeSearchArea(area) ? 5000 : 2000) ? " · mindestens 5.000 Treffer geladen" : ""}`
       : "Noch keine gespeicherten Orte in diesem Kartenausschnitt";
@@ -514,6 +595,7 @@ async function loadNearbySpots(center) {
     visibleSpotLimit = 10;
     render();
     scheduleCommunityLoad();
+    loadNearbyToilets(center);
     status.textContent = `${spots.length} gespeicherte Orte – Hintergrundrecherche vorübergehend nicht erreichbar`;
   }
 }
@@ -651,6 +733,7 @@ async function hydrateVisibleMedia(visibleSpots) {
 
 function card(spot) {
   const commentCount = (state.comments[spot.id] || []).length;
+  const nearestToilet = nearestToilets(spot, 1)[0];
   const spotId = escapeHtml(spot.id);
   return `
     <article class="spot">
@@ -664,6 +747,12 @@ function card(spot) {
       ${starRating(spot.id, true)}
       <div class="meta">${escapeHtml(spot.access)}</div>
       <p>${escapeHtml(spot.note)}</p>
+      <div class="toilet-summary">
+        <strong>🚻 ${nearestToilet ? escapeHtml(nearestToilet.name) : "Toilette"}</strong>
+        <small>${nearestToilet
+          ? `${nearestToilet.distance.toFixed(1)} km · ${escapeHtml(openingHoursLabel(nearestToilet.openingHours))}`
+          : toiletSearchReady ? "Keine öffentliche Toilette bis 15 km in OSM gefunden" : "Toiletten in der Nähe werden gesucht …"}</small>
+      </div>
       <div class="actions">
         <button class="open-detail" data-id="${spotId}">Details & Kommentare${commentCount ? ` (${commentCount})` : ""}</button>
         <button class="show-map" data-id="${spotId}">Auf Karte</button>
@@ -677,6 +766,7 @@ function render() {
   const filtered = spots.filter(spot =>
     (activeFilter === "all" || spot.type === activeFilter)
     && (activePermissionFilter === "all" || spot.status === activePermissionFilter)
+    && (activeToiletFilter === "all" || !toiletSearchReady || (nearestToilets(spot, 1)[0]?.distance || Infinity) <= 5)
     && (!matchedIds || matchedIds.has(spot.id))
   );
   const detailSpots = filtered.filter(spot => distanceKm(searchCenter, spot) <= DETAIL_RADIUS_KM);
@@ -764,6 +854,7 @@ function renderDetail(spotId) {
   const destination = `${spot.lat},${spot.lng}`;
   const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${encodeURIComponent(destination)}`;
   const sourceUrl = safeExternalUrl(spot.sourceUrl, ["openstreetmap.org"]);
+  const nearbyToilets = nearestToilets(spot);
   detailContent.innerHTML = `
     <div class="detail-head">
       <button type="button" class="close-detail" aria-label="Detailansicht schließen">×</button>
@@ -781,6 +872,21 @@ function renderDetail(spotId) {
         <div><dt>Zufahrt</dt><dd>${escapeHtml(spot.access)}</dd></div>
         <div><dt>Übernachtung</dt><dd>${escapeHtml(spot.label)}</dd></div>
       </dl>
+      <section class="nearby-toilets">
+        <div class="comments-title"><h3>Toiletten in der Nähe</h3><span>${nearbyToilets.length}</span></div>
+        <p class="toilet-disclaimer">Öffnungszeiten und Zugang stammen aus OpenStreetMap und können unvollständig oder veraltet sein. Vor der Anfahrt prüfen.</p>
+        <div class="toilet-list">
+          ${nearbyToilets.length ? nearbyToilets.map(toilet => {
+            const toiletSource = safeExternalUrl(toilet.sourceUrl, ["openstreetmap.org"]);
+            const toiletDestination = `${toilet.lat},${toilet.lng}`;
+            return `<article>
+              <div><strong>🚻 ${escapeHtml(toilet.name)}</strong><small>${toilet.distance.toFixed(1)} km · ${escapeHtml(toiletAccessLabel(toilet))}</small></div>
+              <p><b>Öffnungszeiten:</b> ${escapeHtml(openingHoursLabel(toilet.openingHours))}</p>
+              <div class="toilet-actions"><a href="https://www.google.com/maps/dir/?api=1&destination=${toiletDestination}" target="_blank" rel="noopener">Navigation ↗</a>${toiletSource ? `<a href="${escapeHtml(toiletSource)}" target="_blank" rel="noopener">OSM-Datensatz ↗</a>` : ""}</div>
+            </article>`;
+          }).join("") : `<p class="gallery-empty">${toiletSearchReady ? "Keine öffentliche Toilette bis 15 km in OpenStreetMap gefunden." : "Toiletten in der Nähe werden gesucht …"}</p>`}
+        </div>
+      </section>
       <a class="navigation-button" href="https://www.google.com/maps/dir/?api=1&destination=${destination}" target="_blank" rel="noopener">Navigation starten ↗</a>
       <a class="streetview-button" href="${streetViewUrl}" target="_blank" rel="noopener">Street View prüfen ↗</a>
       ${sourceUrl ? `<a class="source-link" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener">Quelle: OpenStreetMap ↗</a>` : ""}
@@ -1113,6 +1219,15 @@ document.querySelectorAll(".permission-filter").forEach(button => {
     activePermissionFilter = button.dataset.permission;
     visibleSpotLimit = 10;
     document.querySelectorAll(".permission-filter").forEach(item => item.classList.toggle("active", item === button));
+    render();
+  });
+});
+
+document.querySelectorAll(".toilet-filter").forEach(button => {
+  button.addEventListener("click", () => {
+    activeToiletFilter = button.dataset.toilet;
+    visibleSpotLimit = 10;
+    document.querySelectorAll(".toilet-filter").forEach(item => item.classList.toggle("active", item === button));
     render();
   });
 });
