@@ -61,8 +61,16 @@ const productCategoryNames = {
   reinigung: "Reinigung",
   toilette: "Toilette",
   packout: "Pack-out",
-  sichtschutz: "Sichtschutz"
+  sichtschutz: "Sichtschutz",
+  cooking: "Kochen",
+  water: "Wasser",
+  lighting: "Licht",
+  sleep: "Schlafen",
+  safety: "Sicherheit",
+  storage: "Aufbewahrung"
 };
+
+const sanitationProductCategories = new Set(["nachtloesung", "reinigung", "toilette", "packout", "sichtschutz"]);
 
 function safeProductUrl(value) {
   try {
@@ -76,7 +84,9 @@ function safeProductUrl(value) {
 async function loadProductRecommendations(backend) {
   const section = document.querySelector("#product-recommendations");
   const container = document.querySelector("#guide-products");
-  if (!section || !container) return;
+  const gearSection = document.querySelector("#gear-recommendations");
+  const gearContainer = document.querySelector("#guide-gear-products");
+  if (!section || !container || !gearSection || !gearContainer) return;
   const { data, error } = await backend
     .from("guide_products")
     .select("id,title,recommendation,category,url,rating_note,sort_order")
@@ -84,9 +94,11 @@ async function loadProductRecommendations(backend) {
     .order("sort_order", { ascending: true });
   if (error) {
     section.hidden = true;
+    gearSection.hidden = true;
     return;
   }
   container.innerHTML = "";
+  gearContainer.innerHTML = "";
   (data || []).forEach(product => {
     const href = safeProductUrl(product.url);
     if (!href) return;
@@ -105,9 +117,10 @@ async function loadProductRecommendations(backend) {
     link.rel = "noopener noreferrer nofollow";
     link.textContent = "Bezug prüfen ↗";
     card.append(category, title, recommendation, rating, link);
-    container.append(card);
+    (sanitationProductCategories.has(product.category) ? container : gearContainer).append(card);
   });
   if (!container.children.length) section.hidden = true;
+  if (!gearContainer.children.length) gearSection.hidden = true;
 }
 
 function sourceLink(source) {

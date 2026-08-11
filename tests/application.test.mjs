@@ -122,6 +122,31 @@ test("spot cards and detail view load attributed media safely", async () => {
   assert.match(index, /connect-src[^\"]*commons\.wikimedia\.org/);
 });
 
+test("spot details provide a fullscreen gallery and moderated community verification", async () => {
+  const [index, app, admin, sql] = await Promise.all([
+    read("index.html"), read("app.js"), read("admin.html"), read("supabase-setup.sql")
+  ]);
+  assert.match(index, /id="photo-lightbox"/);
+  assert.match(app, /openPhotoLightbox/);
+  assert.match(app, /spot_verifications/);
+  assert.match(app, /Community geprüft/);
+  assert.match(admin, /id="admin-verifications"/);
+  assert.match(sql, /rights_confirmed/);
+  assert.match(sql, /status = 'approved'/);
+});
+
+test("guide contains admin-managed equipment recommendations", async () => {
+  const [guide, guideScript, admin, sql] = await Promise.all([
+    read("guide.html"), read("guide.js"), read("admin.html"), read("supabase-guide-products-setup.sql")
+  ]);
+  assert.match(guide, /id="gear"/);
+  assert.match(guide, /SOTO WindMaster/);
+  assert.match(guide, /id="guide-gear-products"/);
+  assert.match(guideScript, /cooking: "Kochen"/);
+  assert.match(admin, /value="cooking"/);
+  assert.match(sql, /soto-windmaster/);
+});
+
 test("dynamic community and OSM content is escaped and external URLs are constrained", async () => {
   const [app, index, guide] = await Promise.all([read("app.js"), read("index.html"), read("guide.html")]);
   assert.match(app, /function safeExternalUrl/);

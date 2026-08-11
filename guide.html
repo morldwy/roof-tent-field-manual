@@ -7,7 +7,7 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
   <title>Dachzelt-Guide · Roof Tent Manual</title>
-  <link rel="stylesheet" href="styles.css?v=20260810-4">
+  <link rel="stylesheet" href="styles.css?v=20260811-5">
 </head>
 <body>
   <nav class="topnav" aria-label="Hauptnavigation">
@@ -52,6 +52,7 @@
         <a href="#setup">Aufbau</a>
         <a href="#weather">Wetter & Schlafklima</a>
         <a href="#sanitation">Sanitär unterwegs</a>
+        <a href="#gear">Empfohlene Ausrüstung</a>
         <a href="#safety">Fahrzeug & Sicherheit</a>
         <a href="#departure">Abreise</a>
         <a href="#media">Videos & Wissen</a>
@@ -245,8 +246,31 @@
           <p class="source-note">Die Maßangaben sind verbreitete Outdoor-Faustregeln aus den verlinkten US-Leitlinien, keine pauschale Rechtsregel für Europa. Vor Ort gelten Eigentumsrecht, Schutzgebietsregeln und behördliche Vorgaben.</p>
         </section>
 
+        <section id="gear" class="guide-chapter">
+          <p class="eyebrow">05 · Weniger, aber verlässlich</p>
+          <h2>Empfohlene Ausrüstung</h2>
+          <p class="media-intro">Ausrüstung soll Abläufe vereinfachen und sicherer machen. Vor jeder Tour Funktion, Vollständigkeit, lokale Regeln und die sichere Verstauung im Fahrzeug prüfen.</p>
+          <div class="guide-card-grid">
+            <article><span class="guide-icon">♨</span><h3>Kochen</h3><p>Ein windstabiler Kartuschenkocher wie der SOTO WindMaster ist kompakt, gehört aber ausschließlich auf festen, nicht brennbaren Untergrund im Freien. Nie im Dachzelt, Fahrzeug oder bei Feuerverbot betreiben.</p></article>
+            <article><span class="guide-icon">◉</span><h3>Wasser</h3><p>Trinkwasser und Brauchwasser klar trennen. Reserve, auslaufsichere Behälter, einfacher Filter sowie eine verlässliche Nachfüllroutine gehören vor der Abfahrt festgelegt.</p></article>
+            <article><span class="guide-icon">✦</span><h3>Licht & Energie</h3><p>Stirnlampe am Einstieg, warmes blendfreies Flächenlicht und eine getrennte Notfallreserve verhindern nächtliches Suchen. Akkus nicht unbeaufsichtigt im heißen Fahrzeug laden.</p></article>
+            <article><span class="guide-icon">☾</span><h3>Schlafen</h3><p>Temperaturgerechter Schlafsack, trockene Wechselkleidung, Lüftungsroutine und ein kleines Reparaturset sind wichtiger als viele Komfortartikel.</p></article>
+            <article><span class="guide-icon">＋</span><h3>Sicherheit</h3><p>Erste-Hilfe-Set, Warnweste, Feuerlöschdecke, Handschuhe, Offline-Karte und bekannte Notrufnummern müssen ohne Umräumen erreichbar sein.</p></article>
+            <article><span class="guide-icon">□</span><h3>Ordnung</h3><p>Feste, beschriftete Module für Küche, Schlafen, Sanitär und Reparatur verkürzen Ankunft und Abreise. Schwere Ausrüstung tief und formschlüssig sichern.</p></article>
+          </div>
+          <div class="callout warning"><strong>Kocher und offene Flammen:</strong> Nur dort verwenden, wo es ausdrücklich erlaubt und sicher ist. Wind, Trockenheit, Waldbrandstufe und Herstellerabstände beachten; Löschmittel bereithalten.</div>
+          <section id="gear-recommendations" class="product-recommendations" aria-labelledby="gear-recommendations-title">
+            <div class="product-recommendations-heading">
+              <div><p class="eyebrow">Optional · adminverwaltet</p><h3 id="gear-recommendations-title">Bewährte Ausrüstungsbeispiele</h3></div>
+              <a href="admin.html">Als Admin bearbeiten</a>
+            </div>
+            <p class="source-note">Keine Ausrüstung ersetzt Übung und lokale Prüfung. Preise, Bewertungen, Brennstoffverfügbarkeit und Zulässigkeit vor dem Kauf beziehungsweise Einsatz prüfen.</p>
+            <div id="guide-gear-products" class="guide-products" aria-live="polite"><p class="empty">Aktivierte Ausrüstungstipps werden geladen …</p></div>
+          </section>
+        </section>
+
         <section id="safety" class="guide-chapter">
-          <p class="eyebrow">05 · Fahrzeug zuerst</p>
+          <p class="eyebrow">06 · Fahrzeug zuerst</p>
           <h2>W211, Dachträger & Sicherheit</h2>
           <ul class="field-list">
             <li>Dynamische Dachlast des Fahrzeugs sowie Belastbarkeit und Montagevorgaben des Dachträgers einhalten.</li>
@@ -260,7 +284,7 @@
         </section>
 
         <section id="departure" class="guide-chapter">
-          <p class="eyebrow">06 · Leave no trace</p>
+          <p class="eyebrow">07 · Leave no trace</p>
           <h2>Abreise</h2>
           <ol class="step-list compact-steps">
             <li><span>1</span><div><strong>Lüften & leeren</strong><p>Schlafraum räumen, Matratze prüfen und Feuchtigkeit abführen.</p></div></li>
@@ -356,6 +380,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="backend.js?v=20260728-1"></script>
-  <script src="guide.js?v=20260811-3"></script>
+  <script src="guide.js?v=20260811-4"></script>
 </body>
 </html>

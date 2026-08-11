@@ -7,7 +7,7 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
   <title>Bezugstipps verwalten · Roof Tent Manual</title>
-  <link rel="stylesheet" href="styles.css?v=20260811-1">
+  <link rel="stylesheet" href="styles.css?v=20260811-5">
 </head>
 <body class="admin-page">
   <nav class="topnav" aria-label="Hauptnavigation">
@@ -37,15 +37,28 @@
     </section>
 
     <section id="admin-products-panel" hidden>
-      <div class="admin-toolbar"><h2>Produkte & Bezugslinks</h2><button id="admin-signout" type="button">Abmelden</button></div>
+      <div class="admin-toolbar"><h2>Community-Prüfungen</h2><button id="admin-signout" type="button">Abmelden</button></div>
       <p id="admin-feedback" class="storage-note" role="status" aria-live="polite"></p>
+      <div id="admin-verifications" class="admin-products"></div>
+      <form id="new-verification" class="admin-panel admin-product-form">
+        <h3>Externe Erfahrung referenzieren</h3>
+        <label>Spot-ID<input name="spot_id" required maxlength="160" placeholder="osm-node-…"></label>
+        <label>Quellentyp<select name="source_type"><option value="own_experience">Eigene Erfahrung</option><option value="comment">Kommentar oder Blog</option><option value="instagram">Instagram-Post/eigene Story</option><option value="other">Andere Originalquelle</option></select></label>
+        <label>Besuchsdatum<input name="visited_on" type="date"></label>
+        <label>Redaktionelles Kurzfazit<textarea name="summary" rows="4" required minlength="20" maxlength="1000"></textarea></label>
+        <label>Original-Link<input name="source_url" type="url" inputmode="url" pattern="https://.*"></label>
+        <label class="admin-check"><input name="rights_confirmed" type="checkbox" required> Nutzung beziehungsweise Referenzierung ist erlaubt und geprüft</label>
+        <label>Status<select name="status"><option value="approved">Freigegeben</option><option value="pending">Zu prüfen</option><option value="rejected">Abgelehnt</option></select></label>
+        <button type="submit">Erfahrung speichern</button>
+      </form>
+      <div class="admin-toolbar admin-section-heading"><h2>Produkte & Bezugslinks</h2></div>
       <div id="admin-products" class="admin-products"></div>
       <form id="new-product" class="admin-panel admin-product-form">
         <h3>Neuen Bezugstipp anlegen</h3>
         <label>Interner Schlüssel<input name="product_key" required maxlength="80" pattern="[a-z0-9-]+"></label>
         <label>Titel<input name="title" required maxlength="120"></label>
         <label>Empfehlung<input name="recommendation" required maxlength="160"></label>
-        <label>Kategorie<select name="category"><option value="nachtloesung">Nachtlösung</option><option value="reinigung">Reinigung</option><option value="toilette">Toilette</option><option value="packout">Pack-out</option><option value="sichtschutz">Sichtschutz</option></select></label>
+        <label>Kategorie<select name="category"><option value="nachtloesung">Nachtlösung</option><option value="reinigung">Reinigung</option><option value="toilette">Toilette</option><option value="packout">Pack-out</option><option value="sichtschutz">Sichtschutz</option><option value="cooking">Kochen</option><option value="water">Wasser</option><option value="lighting">Licht</option><option value="sleep">Schlafen</option><option value="safety">Sicherheit</option><option value="storage">Aufbewahrung</option></select></label>
         <label>Bezug-URL<input name="url" type="url" inputmode="url" required pattern="https://.*"></label>
         <label>Bewertungsnotiz<input name="rating_note" required maxlength="200" value="Bewertungen und Preis vor dem Kauf prüfen"></label>
         <label>Sortierung<input name="sort_order" type="number" value="100" min="0" max="9999"></label>
@@ -72,6 +85,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="backend.js?v=20260728-1"></script>
-  <script src="admin.js?v=20260811-2"></script>
+  <script src="admin.js?v=20260811-3"></script>
 </body>
 </html>

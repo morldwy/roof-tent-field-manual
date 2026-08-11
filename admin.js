@@ -4,11 +4,14 @@ const setupPanel = document.querySelector("#admin-setup");
 const productsPanel = document.querySelector("#admin-products-panel");
 const productsContainer = document.querySelector("#admin-products");
 const sourcesContainer = document.querySelector("#admin-sources");
+const verificationsContainer = document.querySelector("#admin-verifications");
 const adminFeedback = document.querySelector("#admin-feedback");
 
 const categoryLabels = {
   nachtloesung: "Nachtlösung", reinigung: "Reinigung", toilette: "Toilette",
-  packout: "Pack-out", sichtschutz: "Sichtschutz"
+  packout: "Pack-out", sichtschutz: "Sichtschutz", cooking: "Kochen",
+  water: "Wasser", lighting: "Licht", sleep: "Schlafen", safety: "Sicherheit",
+  storage: "Aufbewahrung"
 };
 
 const sourceSectionLabels = {
@@ -154,6 +157,76 @@ async function loadAdminSources() {
   data.forEach(source => sourcesContainer.append(sourceEditor(source)));
 }
 
+function verificationEditor(report) {
+  const article = document.createElement("article");
+  article.className = "admin-panel admin-product-form";
+  const heading = document.createElement("div");
+  heading.className = "admin-product-heading";
+  const title = document.createElement("h3");
+  title.textContent = report.spot_id;
+  const status = document.createElement("strong");
+  status.textContent = report.status === "approved" ? "Freigegeben" : report.status === "rejected" ? "Abgelehnt" : "Zu prüfen";
+  heading.append(title, status);
+  const summary = document.createElement("p");
+  summary.textContent = report.summary;
+  const meta = document.createElement("p");
+  meta.className = "storage-note";
+  meta.textContent = `${report.source_type} · ${report.visited_on || "Datum offen"}`;
+  article.append(heading, summary, meta);
+  if (report.source_url) {
+    const link = document.createElement("a");
+    link.href = report.source_url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "Originalquelle prüfen ↗";
+    article.append(link);
+  }
+  const actions = document.createElement("div");
+  actions.className = "admin-actions";
+  [["Freigeben", "approved"], ["Ablehnen", "rejected"]].forEach(([label, value]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.addEventListener("click", () => updateVerification(report.id, value));
+    actions.append(button);
+  });
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "danger-button";
+  remove.textContent = "Löschen";
+  remove.addEventListener("click", () => deleteVerification(report.id));
+  actions.append(remove);
+  article.append(actions);
+  return article;
+}
+
+async function loadAdminVerifications() {
+  const { data, error } = await adminBackend.from("spot_verifications").select("*").order("created_at", { ascending: false }).limit(250);
+  if (error) throw error;
+  verificationsContainer.innerHTML = "";
+  if (!data.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = "Noch keine Community-Prüfungen eingereicht.";
+    verificationsContainer.append(empty);
+    return;
+  }
+  data.forEach(report => verificationsContainer.append(verificationEditor(report)));
+}
+
+async function updateVerification(id, status) {
+  const { error } = await adminBackend.from("spot_verifications").update({ status, reviewed_at: new Date().toISOString() }).eq("id", id);
+  adminFeedback.textContent = error ? `Fehler: ${error.message}` : "Prüfstatus gespeichert.";
+  if (!error) await loadAdminVerifications();
+}
+
+async function deleteVerification(id) {
+  if (!confirm("Diesen Erfahrungsnachweis wirklich löschen?")) return;
+  const { error } = await adminBackend.from("spot_verifications").delete().eq("id", id);
+  adminFeedback.textContent = error ? `Fehler: ${error.message}` : "Erfahrungsnachweis gelöscht.";
+  if (!error) await loadAdminVerifications();
+}
+
 async function updateProduct(id, values, message) {
   adminFeedback.textContent = "Wird gespeichert …";
   const { error } = await adminBackend.from("guide_products").update({ ...values, updated_at: new Date().toISOString() }).eq("id", id);
@@ -225,7 +298,7 @@ async function renderAdmin(session) {
     return;
   }
   productsPanel.hidden = false;
-  await Promise.all([loadAdminProducts(), loadAdminSources()]);
+  await Promise.all([loadAdminProducts(), loadAdminSources(), loadAdminVerifications()]);
 }
 
 document.querySelector("#admin-login").addEventListener("submit", async event => {
@@ -288,6 +361,29 @@ document.querySelector("#new-source").addEventListener("submit", async event => 
   if (!error) {
     form.reset();
     await loadAdminSources();
+  }
+});
+
+document.querySelector("#new-verification").addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const session = (await adminBackend.auth.getSession()).data.session;
+  const values = {
+    spot_id: form.elements.spot_id.value.trim(),
+    user_id: session.user.id,
+    source_type: form.elements.source_type.value,
+    summary: form.elements.summary.value.trim(),
+    visited_on: form.elements.visited_on.value || null,
+    source_url: form.elements.source_url.value.trim() || null,
+    rights_confirmed: form.elements.rights_confirmed.checked,
+    status: form.elements.status.value,
+    reviewed_at: form.elements.status.value === "pending" ? null : new Date().toISOString()
+  };
+  const { error } = await adminBackend.from("spot_verifications").insert(values);
+  adminFeedback.textContent = error ? `Fehler: ${error.message}` : "Erfahrungsnachweis gespeichert.";
+  if (!error) {
+    form.reset();
+    await loadAdminVerifications();
   }
 });
 

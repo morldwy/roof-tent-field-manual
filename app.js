@@ -54,6 +54,9 @@ const CLUSTER_RADIUS_KM = 25;
 const commonsPhotoCache = new Map();
 const detailDialog = document.querySelector("#spot-detail");
 const detailContent = document.querySelector("#detail-content");
+const photoLightbox = document.querySelector("#photo-lightbox");
+const lightboxImage = document.querySelector("#lightbox-image");
+const lightboxCaption = document.querySelector("#lightbox-caption");
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
 let activeFilter = "all";
 let activePermissionFilter = "all";
@@ -77,9 +80,11 @@ let toilets = [];
 let toiletSearchReady = false;
 let toiletSearchSequence = 0;
 let activeToiletFilter = "all";
+let activeGalleryPhotos = [];
+let activeGalleryIndex = 0;
 
 const backend = window.ROOF_TENT_BACKEND.client;
-const state = { ratings: {}, ratingCounts: {}, comments: {}, user: null, ready: false };
+const state = { ratings: {}, ratingCounts: {}, comments: {}, verifications: {}, user: null, ready: false };
 const searchInput = document.querySelector("#spot-search");
 const searchSuggestions = document.querySelector("#search-suggestions");
 const spotList = document.querySelector("#spots");
@@ -97,6 +102,16 @@ function safeExternalUrl(value, allowedHosts) {
     return url.protocol === "https:" && allowedHosts.some(host =>
       url.hostname === host || url.hostname.endsWith(`.${host}`)
     ) ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function safeVerificationUrl(value) {
+  try {
+    const url = new URL(value);
+    const blockedHost = /^(localhost|127\.|10\.|192\.168\.|169\.254\.|0\.0\.0\.0)/.test(url.hostname);
+    return url.protocol === "https:" && !blockedHost ? url.href : "";
   } catch {
     return "";
   }
@@ -695,7 +710,7 @@ function communityPhotosForSpot(spotId) {
     .map(url => ({ url, sourceUrl: url, alt: "Community-Foto zu diesem Spot", credit: "Community", license: "Vom Nutzer bereitgestellt" }));
 }
 
-function createMediaFigure(photo, compact = false) {
+function createMediaFigure(photo, compact = false, onOpen = null) {
   const figure = document.createElement("figure");
   figure.className = compact ? "spot-media is-loaded" : "gallery-item";
   const image = document.createElement("img");
@@ -703,7 +718,17 @@ function createMediaFigure(photo, compact = false) {
   image.alt = photo.alt;
   image.loading = "lazy";
   image.decoding = "async";
-  figure.append(image);
+  if (!compact && onOpen) {
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "gallery-open";
+    open.setAttribute("aria-label", "Foto als Vollbild öffnen");
+    open.append(image);
+    open.addEventListener("click", onOpen);
+    figure.append(open);
+  } else {
+    figure.append(image);
+  }
   if (!compact) {
     const caption = document.createElement("figcaption");
     const link = document.createElement("a");
@@ -851,6 +876,7 @@ function renderDetail(spotId) {
   const spot = spots.find(item => item.id === spotId);
   if (!spot) return;
   const comments = state.comments[spot.id] || [];
+  const verifications = state.verifications[spot.id] || [];
   const destination = `${spot.lat},${spot.lng}`;
   const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${encodeURIComponent(destination)}`;
   const sourceUrl = safeExternalUrl(spot.sourceUrl, ["openstreetmap.org"]);
@@ -861,6 +887,7 @@ function renderDetail(spotId) {
       <p class="eyebrow">${escapeHtml(spot.type)} · ${spot.lat.toFixed(4)}, ${spot.lng.toFixed(4)}</p>
       <h2>${escapeHtml(spot.icon)} ${escapeHtml(spot.name)}</h2>
       <div class="detail-status"><span class="status-dot ${spot.status}"></span>${escapeHtml(spot.label)}</div>
+      ${verifications.length ? `<div class="community-verified">✓ Community geprüft · ${verifications.length} freigegebene ${verifications.length === 1 ? "Erfahrung" : "Erfahrungen"}</div>` : ""}
     </div>
     <div class="detail-body">
       <section class="spot-gallery" data-detail-gallery="${escapeHtml(spot.id)}" aria-label="Bilder zum Spot">
@@ -891,6 +918,23 @@ function renderDetail(spotId) {
       <a class="streetview-button" href="${streetViewUrl}" target="_blank" rel="noopener">Street View prüfen ↗</a>
       ${sourceUrl ? `<a class="source-link" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener">Quelle: OpenStreetMap ↗</a>` : ""}
 
+      <section class="verification-section">
+        <div class="comments-title"><h3>Community-Prüfung</h3><span>${verifications.length}</span></div>
+        <p class="toilet-disclaimer">Erfahrungsberichte bestätigen einen Besuch, aber keine Übernachtungserlaubnis. Quellen werden erst nach redaktioneller Prüfung angezeigt.</p>
+        <div class="verification-list">
+          ${verifications.length ? verifications.map(verificationMarkup).join("") : '<p class="empty">Noch kein freigegebener Erfahrungsbericht für diesen Ort.</p>'}
+        </div>
+        <form id="verification-form">
+          <label>Art der Erfahrung<select name="source_type"><option value="own_experience">Eigene Erfahrung</option><option value="comment">Freigegebener Kommentar/Blog</option><option value="instagram">Instagram-Post oder eigene Story</option><option value="other">Andere Originalquelle</option></select></label>
+          <label>Besuchsdatum<input name="visited_on" type="date"></label>
+          <label>Kurzbericht<textarea name="summary" rows="4" minlength="20" maxlength="1000" required placeholder="Zufahrt, Tageszeit, Ruhe, Beschilderung und beobachtete Einschränkungen …"></textarea></label>
+          <label>Original-Link (optional)<input name="source_url" type="url" inputmode="url" pattern="https://.*" placeholder="https://…"></label>
+          <label class="admin-check"><input name="rights_confirmed" type="checkbox" required> Ich habe den Bericht selbst verfasst beziehungsweise darf diese Originalquelle zur Prüfung einreichen.</label>
+          <button class="submit-verification" type="submit">Zur Prüfung einreichen</button>
+          <p class="storage-note">Keine fremden Texte, Fotos oder Stories kopieren. Nur eigene Inhalte oder Original-Links mit entsprechender Berechtigung einreichen.</p>
+        </form>
+      </section>
+
       <section class="comments-section">
         <div class="comments-title">
           <h3>Kommentare & Fotos</h3>
@@ -917,6 +961,48 @@ function renderDetail(spotId) {
   const fileInput = detailContent.querySelector("#comment-photos");
   fileInput.addEventListener("change", () => previewFiles(fileInput.files));
   detailContent.querySelector("#comment-form").addEventListener("submit", saveComment);
+  detailContent.querySelector("#verification-form").addEventListener("submit", saveVerification);
+}
+
+function verificationMarkup(report) {
+  const sourceUrl = report.source_url ? safeVerificationUrl(report.source_url) : "";
+  const visited = report.visited_on ? new Date(`${report.visited_on}T12:00:00`) : null;
+  const visitedLabel = visited && !Number.isNaN(visited.valueOf())
+    ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(visited)
+    : "Datum nicht angegeben";
+  return `<article class="comment verification-card">
+    <time>${escapeHtml(visitedLabel)}</time>
+    <p>${escapeHtml(report.summary).replace(/\n/g, "<br>")}</p>
+    ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer nofollow">Originalquelle prüfen ↗</a>` : ""}
+  </article>`;
+}
+
+async function saveVerification(event) {
+  event.preventDefault();
+  if (!state.user) return alert("Die Datenbankverbindung wird noch hergestellt. Bitte versuche es gleich erneut.");
+  const form = event.currentTarget;
+  const submit = form.querySelector(".submit-verification");
+  submit.disabled = true;
+  submit.textContent = "Wird eingereicht …";
+  const values = {
+    spot_id: activeSpotId,
+    user_id: state.user.id,
+    source_type: form.elements.source_type.value,
+    summary: form.elements.summary.value.trim(),
+    visited_on: form.elements.visited_on.value || null,
+    source_url: form.elements.source_url.value.trim() || null,
+    rights_confirmed: form.elements.rights_confirmed.checked,
+    status: "pending"
+  };
+  const { error } = await backend.from("spot_verifications").insert(values);
+  if (error) {
+    submit.disabled = false;
+    submit.textContent = "Zur Prüfung einreichen";
+    alert("Der Erfahrungsbericht konnte nicht gespeichert werden. Bitte versuche es später erneut.");
+    return;
+  }
+  form.reset();
+  submit.textContent = "Zur Prüfung eingereicht";
 }
 
 async function hydrateDetailGallery(spot) {
@@ -931,7 +1017,57 @@ async function hydrateDetailGallery(spot) {
     target.innerHTML = '<p class="gallery-empty">Noch kein frei verfügbares Umgebungsfoto. Du kannst unten das erste Spotfoto ergänzen.</p>';
     return;
   }
-  photos.forEach(photo => target.append(createMediaFigure(photo)));
+  activeGalleryPhotos = photos;
+  const track = document.createElement("div");
+  track.className = "gallery-track";
+  photos.forEach((photo, index) => track.append(createMediaFigure(photo, false, () => openPhotoLightbox(index))));
+  target.append(track);
+  if (photos.length > 1) {
+    const controls = document.createElement("div");
+    controls.className = "gallery-controls";
+    const previous = document.createElement("button");
+    previous.type = "button";
+    previous.textContent = "‹";
+    previous.setAttribute("aria-label", "Vorheriges Galeriefoto");
+    const count = document.createElement("span");
+    count.textContent = `1 / ${photos.length}`;
+    const next = document.createElement("button");
+    next.type = "button";
+    next.textContent = "›";
+    next.setAttribute("aria-label", "Nächstes Galeriefoto");
+    let index = 0;
+    const move = delta => {
+      index = (index + delta + photos.length) % photos.length;
+      track.children[index].scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+      count.textContent = `${index + 1} / ${photos.length}`;
+    };
+    previous.addEventListener("click", () => move(-1));
+    next.addEventListener("click", () => move(1));
+    controls.append(previous, count, next);
+    target.append(controls);
+  }
+}
+
+function renderPhotoLightbox() {
+  const photo = activeGalleryPhotos[activeGalleryIndex];
+  if (!photo) return;
+  lightboxImage.src = photo.url;
+  lightboxImage.alt = photo.alt;
+  lightboxCaption.textContent = `${photo.credit} · ${photo.license} · ${activeGalleryIndex + 1}/${activeGalleryPhotos.length}`;
+  document.querySelector("#lightbox-prev").hidden = activeGalleryPhotos.length < 2;
+  document.querySelector("#lightbox-next").hidden = activeGalleryPhotos.length < 2;
+}
+
+function openPhotoLightbox(index) {
+  activeGalleryIndex = index;
+  renderPhotoLightbox();
+  if (!photoLightbox.open) photoLightbox.showModal();
+}
+
+function movePhotoLightbox(delta) {
+  if (!activeGalleryPhotos.length) return;
+  activeGalleryIndex = (activeGalleryIndex + delta + activeGalleryPhotos.length) % activeGalleryPhotos.length;
+  renderPhotoLightbox();
 }
 
 function openDetail(spotId) {
@@ -1047,7 +1183,7 @@ async function loadData() {
   }
   if (!chunks.length) return;
 
-  const [ratingResponses, commentResponses] = await Promise.all([
+  const [ratingResponses, commentResponses, verificationResponses] = await Promise.all([
     Promise.all(chunks.map(ids => backend
       .from("ratings")
       .select("spot_id,user_id,value")
@@ -1058,13 +1194,21 @@ async function loadData() {
       .select("id,spot_id,body,created_at,comment_photos(storage_path)")
       .in("spot_id", ids)
       .order("created_at", { ascending: true })
-      .limit(2000)))
+      .limit(2000))),
+    Promise.all(chunks.map(ids => backend
+      .from("spot_verifications")
+      .select("spot_id,source_type,summary,visited_on,source_url,created_at")
+      .eq("status", "approved")
+      .in("spot_id", ids)
+      .order("created_at", { ascending: false })
+      .limit(1000)))
   ]);
-  const failed = [...ratingResponses, ...commentResponses].find(response => response.error);
+  const failed = [...ratingResponses, ...commentResponses, ...verificationResponses].find(response => response.error);
   if (failed) throw failed.error;
   if (sequence !== communitySequence) return;
   const ratings = ratingResponses.flatMap(response => response.data || []);
   const comments = commentResponses.flatMap(response => response.data || []);
+  const verifications = verificationResponses.flatMap(response => response.data || []);
 
   state.ratings = {};
   state.ratingCounts = {};
@@ -1084,6 +1228,10 @@ async function loadData() {
       url: backend.storage.from("spot-photos").getPublicUrl(photo.storage_path).data.publicUrl
     }));
     (state.comments[comment.spot_id] ||= []).push(comment);
+  }
+  state.verifications = {};
+  for (const verification of verifications) {
+    (state.verifications[verification.spot_id] ||= []).push(verification);
   }
   state.ready = true;
   render();
@@ -1230,6 +1378,18 @@ document.querySelectorAll(".toilet-filter").forEach(button => {
     document.querySelectorAll(".toilet-filter").forEach(item => item.classList.toggle("active", item === button));
     render();
   });
+});
+
+document.querySelector("#lightbox-close").addEventListener("click", () => photoLightbox.close());
+document.querySelector("#lightbox-prev").addEventListener("click", () => movePhotoLightbox(-1));
+document.querySelector("#lightbox-next").addEventListener("click", () => movePhotoLightbox(1));
+photoLightbox.addEventListener("click", event => {
+  if (event.target === photoLightbox) photoLightbox.close();
+});
+document.addEventListener("keydown", event => {
+  if (!photoLightbox.open) return;
+  if (event.key === "ArrowLeft") movePhotoLightbox(-1);
+  if (event.key === "ArrowRight") movePhotoLightbox(1);
 });
 
 detailDialog.addEventListener("click", event => {

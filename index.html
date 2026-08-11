@@ -9,7 +9,7 @@
   <title>Wild Spots · Roof Tent Manual</title>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=20260810-4">
+  <link rel="stylesheet" href="styles.css?v=20260811-5">
 </head>
 <body>
   <nav class="topnav" aria-label="Hauptnavigation">
@@ -126,11 +126,17 @@
   <dialog id="spot-detail" class="detail-dialog">
     <div id="detail-content"></div>
   </dialog>
+  <dialog id="photo-lightbox" class="photo-lightbox" aria-label="Foto in Vollbildansicht">
+    <button id="lightbox-close" class="lightbox-close" type="button" aria-label="Vollbildansicht schließen">×</button>
+    <button id="lightbox-prev" class="lightbox-nav lightbox-prev" type="button" aria-label="Vorheriges Foto">‹</button>
+    <figure><img id="lightbox-image" alt=""><figcaption id="lightbox-caption"></figcaption></figure>
+    <button id="lightbox-next" class="lightbox-nav lightbox-next" type="button" aria-label="Nächstes Foto">›</button>
+  </dialog>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="backend.js?v=20260728-1"></script>
-  <script src="app.js?v=20260810-3"></script>
+  <script src="app.js?v=20260811-4"></script>
 </body>
 </html>
