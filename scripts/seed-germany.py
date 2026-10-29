@@ -5,6 +5,7 @@ import argparse
 import json
 import math
 import pathlib
+import socket
 import time
 import urllib.parse
 import urllib.request
@@ -14,8 +15,10 @@ PROJECT_URL = "https://cpnxysplsqolgvurezpe.supabase.co"
 OVERPASS = (
     "https://overpass-api.de/api/interpreter",
     "https://overpass.private.coffee/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 )
+OVERPASS_TIMEOUT = 18
+OVERPASS_QUERY_TIMEOUT = 14
 LOCAL_STATE_DIR = pathlib.Path(__file__).parents[1] / ".local"
 IMPORT_KEY_FILE = LOCAL_STATE_DIR / "spot-import-key"
 
@@ -48,7 +51,7 @@ def authenticate(key):
 
 
 def query(lat, lng):
-    return f"""[out:json][timeout:28];
+    return f"""[out:json][timeout:{OVERPASS_QUERY_TIMEOUT}];
 (
   nwr(around:50000,{lat},{lng})["tourism"="viewpoint"]["access"!="private"]["access"!="no"];
   nwr(around:50000,{lat},{lng})["tourism"="picnic_site"]["access"!="private"]["access"!="no"];
@@ -60,7 +63,7 @@ out center tags;"""
 
 
 def coastline_query(lat, lng):
-    return f"""[out:json][timeout:28];
+    return f"""[out:json][timeout:{OVERPASS_QUERY_TIMEOUT}];
 way(around:52000,{lat},{lng})["natural"="coastline"];
 out geom;"""
 
@@ -134,6 +137,7 @@ def spot(element, coast):
 
 
 def research(lat, lng):
+    errors = []
     for endpoint in OVERPASS:
         try:
             def fetch(overpass_query):
@@ -142,7 +146,7 @@ def research(lat, lng):
                     data=urllib.parse.urlencode({"data": overpass_query}).encode(),
                     headers={"User-Agent": "RoofTentFieldManual/1.0"},
                 )
-                with urllib.request.urlopen(req, timeout=40) as response:
+                with urllib.request.urlopen(req, timeout=OVERPASS_TIMEOUT) as response:
                     return json.load(response)["elements"]
 
             elements = fetch(query(lat, lng))
@@ -157,9 +161,11 @@ def research(lat, lng):
                 for item in (spot(element, coast) for element in elements)
                 if item
             ]
-        except Exception:
+        except (TimeoutError, socket.timeout, urllib.error.URLError,
+                urllib.error.HTTPError, json.JSONDecodeError) as error:
+            errors.append(f"{endpoint}: {error}")
             continue
-    raise RuntimeError("No research provider available")
+    raise RuntimeError("No research provider available: " + " | ".join(errors))
 
 
 def rectangle_grid(south, north, west, east):
@@ -217,6 +223,11 @@ def main():
     )
     parser.add_argument("--lat", type=float)
     parser.add_argument("--lng", type=float)
+    parser.add_argument(
+        "--continue-on-provider-error",
+        action="store_true",
+        help="Record a failed grid point and continue with the next point.",
+    )
     args = parser.parse_args()
     LOCAL_STATE_DIR.mkdir(mode=0o700, exist_ok=True)
     state_file = LOCAL_STATE_DIR / f"seed-{args.region}.json"
@@ -237,7 +248,27 @@ def main():
     requested_center = (args.lat, args.lng) if args.lat is not None and args.lng is not None else None
     while completed < args.batch and (requested_center or state["next"] < len(points)):
         lat, lng = requested_center or points[state["next"]]
-        candidates = research(lat, lng)
+        try:
+            candidates = research(lat, lng)
+        except RuntimeError as error:
+            if not args.continue_on_provider_error or requested_center:
+                raise
+            state.setdefault("failed", []).append({
+                "index": state["next"],
+                "lat": lat,
+                "lng": lng,
+                "error": str(error)[:500],
+            })
+            state["next"] += 1
+            completed += 1
+            state_file.write_text(json.dumps(state))
+            print(json.dumps({
+                "skipped": state["next"] - 1,
+                "lat": lat,
+                "lng": lng,
+                "reason": "provider_error",
+            }), flush=True)
+            continue
         for start in range(0, len(candidates), 500):
             result = request_json(
                 f"{PROJECT_URL}/functions/v1/discover-spots",
@@ -256,6 +287,11 @@ def main():
         state["next"] += 1
         completed += 1
         state_file.write_text(json.dumps(state))
+        print(json.dumps({
+            "completed": state["next"],
+            "total": len(points),
+            "imported": state["imported"],
+        }), flush=True)
         time.sleep(2)
 
     print(json.dumps({
