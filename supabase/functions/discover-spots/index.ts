@@ -3,7 +3,7 @@ import { withSupabase } from "jsr:@supabase/server@^1";
 const endpoints = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
-  "https://overpass.kumi.systems/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ];
 
 function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {

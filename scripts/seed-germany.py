@@ -50,6 +50,25 @@ def authenticate(key):
     )["access_token"]
 
 
+def research_via_edge_function(lat, lng, key, token):
+    """Use the deployed importer when local Overpass TLS routes are unavailable.
+
+    The Edge Function applies the same amber/unverified policy and persists the
+    returned candidates, so callers must not import the response a second time.
+    """
+    result = request_json(
+        f"{PROJECT_URL}/functions/v1/discover-spots",
+        data={"lat": lat, "lng": lng, "radius": 50000},
+        headers={
+            "apikey": key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        timeout=50,
+    )
+    return result.get("spots", [])
+
+
 def query(lat, lng):
     return f"""[out:json][timeout:{OVERPASS_QUERY_TIMEOUT}];
 (
@@ -248,39 +267,50 @@ def main():
     requested_center = (args.lat, args.lng) if args.lat is not None and args.lng is not None else None
     while completed < args.batch and (requested_center or state["next"] < len(points)):
         lat, lng = requested_center or points[state["next"]]
+        imported_remotely = False
         try:
             candidates = research(lat, lng)
         except RuntimeError as error:
-            if not args.continue_on_provider_error or requested_center:
-                raise
-            state.setdefault("failed", []).append({
-                "index": state["next"],
-                "lat": lat,
-                "lng": lng,
-                "error": str(error)[:500],
-            })
-            state["next"] += 1
-            completed += 1
-            state_file.write_text(json.dumps(state))
-            print(json.dumps({
-                "skipped": state["next"] - 1,
-                "lat": lat,
-                "lng": lng,
-                "reason": "provider_error",
-            }), flush=True)
-            continue
-        for start in range(0, len(candidates), 500):
-            result = request_json(
-                f"{PROJECT_URL}/functions/v1/discover-spots",
-                data={"spots": candidates[start:start + 500], "importKey": import_key},
-                headers={
-                    "apikey": key,
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                },
-                timeout=45,
-            )
-            state["imported"] += result.get("imported", 0)
+            try:
+                candidates = research_via_edge_function(lat, lng, key, token)
+                imported_remotely = True
+            except Exception as fallback_error:
+                if not args.continue_on_provider_error or requested_center:
+                    raise RuntimeError(
+                        f"Local and Edge research unavailable: {error}; "
+                        f"fallback: {fallback_error}"
+                    ) from fallback_error
+                state.setdefault("failed", []).append({
+                    "index": state["next"],
+                    "lat": lat,
+                    "lng": lng,
+                    "error": f"{error}; edge: {fallback_error}"[:500],
+                })
+                state["next"] += 1
+                completed += 1
+                state_file.write_text(json.dumps(state))
+                print(json.dumps({
+                    "skipped": state["next"] - 1,
+                    "lat": lat,
+                    "lng": lng,
+                    "reason": "provider_error",
+                }), flush=True)
+                continue
+        if imported_remotely:
+            state["imported"] += len(candidates)
+        else:
+            for start in range(0, len(candidates), 500):
+                result = request_json(
+                    f"{PROJECT_URL}/functions/v1/discover-spots",
+                    data={"spots": candidates[start:start + 500], "importKey": import_key},
+                    headers={
+                        "apikey": key,
+                        "Authorization": f"Bearer {token}",
+                        "Content-Type": "application/json",
+                    },
+                    timeout=45,
+                )
+                state["imported"] += result.get("imported", 0)
         if requested_center:
             completed += 1
             break
